@@ -1,0 +1,72 @@
+﻿/* FileDetails.module.css */
+.panel {
+    width: 300px;
+    height: 100%;
+    box-sizing: border-box;
+
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+
+    display: flex;
+    flex-direction: column;
+
+    transition: transform 220ms ease, opacity 220ms ease;
+    will-change: transform, opacity;
+}
+
+.open {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.closed {
+    transform: translateX(12px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.header {
+    padding: 12px 12px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.title {
+    font-weight: 600;
+}
+
+.closeButton {
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    background: transparent;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.content {
+    padding: 12px;
+    overflow: auto;
+}
+
+.meta {
+    display: grid;
+    gap: 12px;
+}
+
+.label {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.value {
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.empty {
+    opacity: 0.7;
+    font-size: 14px;
+}

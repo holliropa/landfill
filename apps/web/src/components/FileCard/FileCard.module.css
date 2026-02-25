@@ -1,0 +1,48 @@
+﻿.container {
+    display: flex;
+    flex-direction: column;
+    width: 200px;
+    height: 200px;
+    background-color: azure;
+    border-radius: 10px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.1);
+    border-width: 2px;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    margin: 8px 2px 5px 10px;
+}
+
+.fileName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+    align-self: center;
+}
+
+.settingsButtonWrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.settingsButton {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    line-height: 0;
+}
+
+.settingsButton:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.settingsIcon {
+    stroke-width: 1;
+    width: 22px;
+}
