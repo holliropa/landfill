@@ -4,6 +4,12 @@
     flex-grow: 1;
 }
 
+.sidebar{
+    position: sticky;
+    overflow: auto;
+    width: 15%;
+}
+
 .mainContent {
     display: flex;
     flex-direction: column;

@@ -1,0 +1,58 @@
+﻿.container {
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    min-width: 100%;
+    user-select: none;
+}
+
+.header {
+    display: grid;
+    align-items: center;
+    user-select: none;
+
+    position: sticky;
+    top: 0;
+    background: #c6c6c6;
+}
+
+.headerCell {
+    position: relative;
+    padding: 10px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.resizeHandle {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: #30363d;
+    z-index: 2;
+}
+
+.body {
+    overflow: auto;
+}
+
+.row {
+    display: grid;
+    align-items: center;
+    /*border-bottom: 1px solid #30363d;*/
+}
+
+.cell {
+    padding: 8px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.row:hover {
+    background-color: rgba(198, 198, 198, 0.4);
+    cursor: pointer;
+}

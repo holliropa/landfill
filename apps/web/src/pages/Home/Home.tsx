@@ -69,6 +69,10 @@ export function Home() {
 
   return (
     <div className={styles.layout}>
+      <div className={styles.sidebar}>
+        HELLO
+      </div>
+
       <div className={styles.mainContent}>
         <div className={styles.filesContainer}>
           <FileList

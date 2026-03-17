@@ -75,7 +75,9 @@ export function FileCard({
         </div>
       </div>
 
-      <FileThumbnail file={file} />
+      <div style={{}}>
+        <FileThumbnail fileId={file.id} alt={file.originalName} />
+      </div>
     </div>
   );
 }

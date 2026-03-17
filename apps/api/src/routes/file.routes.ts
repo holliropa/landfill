@@ -1,11 +1,8 @@
 ﻿import { Router } from "express";
-import path from "path";
-import * as fs from "fs";
 import multer from "multer";
 import {
   deleteFile,
   downloadFile,
-  getFiles,
   getFileThumbnail,
   uploadFiles,
 } from "@/controllers/file.controller";
@@ -22,7 +19,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.get("/", getFiles);
 router.post("/", upload.array("files"), uploadFiles);
 router.delete("/:id", deleteFile);
 router.get("/:id/download", downloadFile);

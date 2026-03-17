@@ -7,7 +7,7 @@ node_modules
 /generated/prisma
 
 # Local Database
-dev.db
+/dev.db
 
 # Uploaded files
 uploads/

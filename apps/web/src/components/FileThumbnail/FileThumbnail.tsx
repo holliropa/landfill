@@ -1,26 +1,26 @@
 ﻿import styles from "./FileThumbnail.module.css";
 import { FileIcon } from "lucide-react";
 import { useState } from "react";
-import type { StoredFile } from "@/types";
 
 interface FileThumbnailProps {
-  file: StoredFile;
+  fileId: string;
+  alt: string;
 }
 
-export function FileThumbnail({ file }: FileThumbnailProps) {
+export function FileThumbnail({ fileId, alt }: FileThumbnailProps) {
   const [failedFileId, setFailedFileId] = useState<string | null>(null);
 
-  const hasError = failedFileId === file.id;
+  const hasError = failedFileId === fileId;
 
-  const thumbnailUrl = `http://localhost:3000/api/files/${file.id}/thumbnail`;
+  const thumbnailUrl = `http://localhost:3000/api/files/${fileId}/thumbnail`;
 
   return (
     <div className={styles.container}>
       {!hasError ? (
         <img
           src={thumbnailUrl}
-          alt={file.originalName}
-          onError={() => setFailedFileId(file.id)}
+          alt={alt}
+          onError={() => setFailedFileId(fileId)}
           className={styles.thumbnail}
         />
       ) : (

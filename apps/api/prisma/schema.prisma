@@ -11,10 +11,33 @@ datasource db {
 }
 
 model File {
-  id           String   @id @default(uuid())
+  id String @id @default(uuid())
+
   originalName String
   diskName     String
   size         Int
   mimeType     String
-  createdAt    DateTime @default(now())
+
+  folderId String?
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([folderId])
+}
+
+model Folder {
+  id String @id @default(uuid())
+
+  name String
+
+  parentFolderId  String?
+  parentFolder    Folder?  @relation("FolderTree", fields: [parentFolderId], references: [id], onDelete: Cascade)
+  childrenFolders Folder[] @relation("FolderTree")
+  files           File[]
+
+  createdAt DateTime @default(now())
+
+  @@index([parentFolderId])
+  @@unique([parentFolderId, name])
 }

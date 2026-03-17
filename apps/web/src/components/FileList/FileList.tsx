@@ -15,9 +15,9 @@ export function FileList({ files, onShowDetails, onDelete }: FileListProps) {
     <div
       style={{
         display: "grid",
-        gap: "15px",
-        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-        padding: "15px",
+        gap: "10px",
+        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+        padding: "10px",
       }}
     >
       {files.map((file) => {

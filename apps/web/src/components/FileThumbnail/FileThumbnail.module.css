@@ -1,12 +1,12 @@
 ﻿.container {
-    flex: 1;
-    min-height: 0;
+    width: 100%;
+    height: 100%;
     background-color: rgba(255, 255, 255, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 10px;
-    border-radius: 10px;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .thumbnail {
@@ -14,10 +14,11 @@
     height: 100%;
     object-fit: cover;
     border-radius: 4px;
+    display: block;
 }
 
 .defaultIcon {
-    width: 60%;
-    height: 60%;
+    width: 70%;
+    height: 70%;
     stroke-width: 1;
 }

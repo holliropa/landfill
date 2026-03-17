@@ -1,27 +1,31 @@
 ﻿import { Request, Response } from "express";
 import { prisma } from "@/lib/prisma";
 import { FileService } from "@/services/file.service";
-import path from "path";
 import * as fs from "fs";
 import sharp from "sharp";
 
-export async function getFiles(req: Request, res: Response) {
-  try {
-    const files = await prisma.file.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    res.json(files);
-  } catch (error) {
-    console.log("Error fetching files: ", error);
-    res.status(500).json({ error: "Failed to fetch files" });
-  }
-}
-
 export async function uploadFiles(req: Request, res: Response) {
   const uploadedFiles = req.files as Express.Multer.File[];
+  const { folder: folderId } = req.body as { folder: string };
+
+  if (!folderId) {
+    return res.status(400).json({ error: "Folder ID is required" });
+  }
 
   try {
-    // Attempt all database inserts
+    const normalizedFolderId = folderId === "root" ? null : folderId;
+
+    if (normalizedFolderId) {
+      const exists = await prisma.folder.findUnique({
+        where: { id: normalizedFolderId },
+        select: { id: true },
+      });
+
+      if (!exists) {
+        return res.status(404).json({ error: "Folder not found" });
+      }
+    }
+
     const createPromises = uploadedFiles.map((file) =>
       prisma.file.create({
         data: {
@@ -29,6 +33,7 @@ export async function uploadFiles(req: Request, res: Response) {
           diskName: file.filename,
           size: file.size,
           mimeType: file.mimetype,
+          folderId: normalizedFolderId,
         },
       }),
     );
