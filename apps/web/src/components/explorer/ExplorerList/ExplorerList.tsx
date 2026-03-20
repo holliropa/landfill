@@ -10,12 +10,19 @@ type Column = {
   resizable: boolean;
 };
 
-interface ExplorerListProps {
+export type ExplorerListProps = {
   items: ExplorerItem[];
-  onItemOpen: (item: ExplorerItem) => void;
-}
+  selectedKeys: Set<string>;
+  onItemOpen: (index: number) => void;
+  onItemClick: (index: number, event: React.MouseEvent) => void;
+};
 
-export function ExplorerList({ items, onItemOpen }: ExplorerListProps) {
+export function ExplorerList({
+  items,
+  selectedKeys,
+  onItemOpen,
+  onItemClick,
+}: ExplorerListProps) {
   const [columns, setColumns] = useState<Column[]>([
     { key: "thumbnail", label: "", width: 40, minWidth: 40, resizable: false },
     { key: "name", label: "Name", width: 300, minWidth: 100, resizable: true },
@@ -99,15 +106,19 @@ export function ExplorerList({ items, onItemOpen }: ExplorerListProps) {
       </div>
 
       <div className={styles.body}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           return (
             <div
-              key={`${item.type}-${item.id}`}
+              key={item.key}
               className={styles.row}
               style={{
                 gridTemplateColumns,
+                backgroundColor: selectedKeys.has(item.key)
+                  ? "#f0f0f0"
+                  : undefined,
               }}
-              onDoubleClick={() => onItemOpen(item)}
+              onClick={(event) => onItemClick(index, event)}
+              onDoubleClick={() => onItemOpen(index)}
             >
               <div className={styles.cell}>
                 <div

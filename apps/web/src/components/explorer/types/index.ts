@@ -1,8 +1,8 @@
 ﻿import React from "react";
 
 export type ExplorerItem = {
-  id: string;
-  type: "file" | "folder";
+  key: string;
+  kind: "file" | "folder";
   name: string;
   createdAt: Date;
   size: number | null;

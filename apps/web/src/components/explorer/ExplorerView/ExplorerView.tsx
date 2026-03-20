@@ -1,25 +1,21 @@
-﻿import { ExplorerList } from "../ExplorerList";
-import type { ExplorerItem } from "../types";
+﻿import { ExplorerList, type ExplorerListProps } from "../ExplorerList";
 import React, { useRef } from "react";
 
-interface ExplorerViewProps {
+type ExplorerViewProps = ExplorerListProps & {
   folderId: string;
   breadcrumbs: { key: string; name: string }[];
-  items: ExplorerItem[];
-  onItemOpen: (item: ExplorerItem) => void;
   onFilesSelected: (file: File[]) => void;
   onCreateFolder: (name: string) => void;
   onOpenFolder: (folderId: string) => void;
-}
+};
 
 export function ExplorerView({
   folderId,
   breadcrumbs,
-  items,
-  onItemOpen,
-  onOpenFolder,
   onFilesSelected,
   onCreateFolder,
+  onOpenFolder,
+  ...explorerListProps
 }: ExplorerViewProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -101,7 +97,7 @@ export function ExplorerView({
           flexDirection: "column",
         }}
       >
-        <ExplorerList items={items} onItemOpen={onItemOpen} />
+        <ExplorerList {...explorerListProps} />
       </div>
 
       <input
