@@ -39,7 +39,12 @@ export async function uploadFiles(req: Request, res: Response) {
     );
 
     const results = await Promise.all(createPromises);
-    res.status(201).json(results);
+    res.status(201).json(
+      results.map(({ originalName, diskName, ...file }) => ({
+        ...file,
+        name: originalName,
+      })),
+    );
   } catch (error) {
     const fileNames = uploadedFiles.map((f) => f.filename);
     FileService.cleanupFiles(fileNames);

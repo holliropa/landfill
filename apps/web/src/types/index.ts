@@ -11,8 +11,7 @@ export type FileItem = {
   kind: "file";
 
   id: string;
-  originalName: string;
-  diskName: string;
+  name: string;
   size: number;
   mimeType: string;
   createdAt: Date;

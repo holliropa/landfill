@@ -4,7 +4,7 @@ import {
   getFolderContent,
   getFolderPath,
   uploadFiles,
-} from "@/services/api.ts";
+} from "@/lib/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useExplorer(initialFolderId: string = "root") {

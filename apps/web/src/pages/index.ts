@@ -1,2 +1,2 @@
-﻿export * from "./Home";
-export * from "./Explorer";
+﻿export * from "./HomePage";
+export * from "./ExplorerPage";

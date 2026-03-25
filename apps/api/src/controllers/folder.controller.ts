@@ -93,14 +93,30 @@ export async function getFolderContent(req: Request, res: Response) {
 
     const folders = await prisma.folder.findMany({
       where: { parentFolderId: folderId },
+      select: {
+        id: true,
+        name: true,
+        parentFolderId: true,
+        createdAt: true,
+      },
     });
     const files = await prisma.file.findMany({
       where: { folderId },
+      select: {
+        id: true,
+        originalName: true,
+        size: true,
+        mimeType: true,
+        createdAt: true,
+      },
     });
 
     return res.json({
       folders,
-      files,
+      files: files.map(({ originalName, ...file }) => ({
+        ...file,
+        name: originalName,
+      })),
     });
   } catch (error) {
     console.log("Error fetching folder children: ", error);

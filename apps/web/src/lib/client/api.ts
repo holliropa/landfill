@@ -58,6 +58,10 @@ export async function uploadFiles(
   return response.json();
 }
 
+export function getFileDownloadUrl(fileId: string) {
+  return `${API_URL}/files/${fileId}/download`;
+}
+
 export type FolderPathResponse = {
   path: {
     id: string;

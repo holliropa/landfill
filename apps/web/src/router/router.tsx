@@ -12,7 +12,11 @@ export const router = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: "explorer",
+        path: "folder",
+        element: <ExplorerPage />,
+      },
+      {
+        path: "folder/:folderId",
         element: <ExplorerPage />,
       },
     ],
