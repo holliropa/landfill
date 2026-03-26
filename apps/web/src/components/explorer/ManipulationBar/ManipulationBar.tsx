@@ -1,4 +1,15 @@
 ﻿import type { ExplorerItem } from "@/components/Explorer";
+import {
+  createDownload,
+  getArchiveDownloadUrl,
+  getDownloadJob,
+  getFileDownloadUrl,
+} from "@/lib/client";
+import { useState } from "react";
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export type ManipulationBarProps = {
   folderId: string;
@@ -11,6 +22,64 @@ export function ManipulationBar({
   selectedItems,
   onDeselectAll,
 }: ManipulationBarProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    if (selectedItems.length === 0 || isDownloading) return;
+
+    try {
+      setIsDownloading(true);
+
+      if (selectedItems.length === 1 && selectedItems[0].kind === "file") {
+        window.open(getFileDownloadUrl(selectedItems[0].id), "_blank");
+        return;
+      }
+
+      setDownloadStatus("Preparing archive...");
+
+      const result = await createDownload(
+        selectedItems.map((item) => ({
+          kind: item.kind,
+          id: item.id,
+        })),
+      );
+
+      while (true) {
+        const job = await getDownloadJob(result.jobId);
+
+        if (job.status === "ready") {
+          window.open(getArchiveDownloadUrl(result.jobId), "_blank");
+          break;
+        }
+
+        if (job.status === "failed") {
+          throw new Error(job.errorMessage || "Archive creation failed");
+        }
+
+        if (job.status === "expired") {
+          throw new Error("Archive expired");
+        }
+
+        setDownloadStatus(
+          job.progress > 0
+            ? `Preparing archive... ${job.progress}%`
+            : "Preparing archive...",
+        );
+
+        await sleep(1000);
+      }
+
+      setDownloadStatus(null);
+    } catch (error) {
+      console.error(error);
+      setDownloadStatus(
+        error instanceof Error ? error.message : "Download failed",
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div
@@ -24,6 +93,16 @@ export function ManipulationBar({
     >
       <button onClick={onDeselectAll}>x</button>
       <span>{selectedItems.length} selected</span>
+      {downloadStatus ? <span>{downloadStatus}</span> : null}
+      <div
+        style={{
+          marginLeft: "auto",
+        }}
+      >
+        <button onClick={handleDownload} disabled={isDownloading}>
+          {isDownloading ? "Preparing..." : "Download"}
+        </button>
+      </div>
     </div>
   );
 }

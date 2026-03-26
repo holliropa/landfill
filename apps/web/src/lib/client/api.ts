@@ -62,6 +62,10 @@ export function getFileDownloadUrl(fileId: string) {
   return `${API_URL}/files/${fileId}/download`;
 }
 
+export function getArchiveDownloadUrl(jobId: string) {
+  return `${API_URL}/downloads/${jobId}/file`;
+}
+
 export type FolderPathResponse = {
   path: {
     id: string;
@@ -76,6 +80,55 @@ export async function getFolderPath(
 
   if (!response.ok) {
     throw new Error("Failed to fetch folder path");
+  }
+
+  return response.json();
+}
+
+export type DownloadItem = {
+  kind: "file" | "folder";
+  id: string;
+};
+
+export type CreateDownloadResponse = {
+  type: string;
+  jobId: string;
+  status: string;
+};
+
+export async function createDownload(
+  items: DownloadItem[],
+): Promise<CreateDownloadResponse> {
+  const response = await fetch(`${API_URL}/downloads`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ items }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create download");
+  }
+
+  return response.json();
+}
+
+export type DownloadJobResponse = {
+  id: string;
+  status: "pending" | "processing" | "ready" | "failed" | "expired";
+  progress: number;
+  errorMessage: string | null;
+  expiresAt: string | null;
+};
+
+export async function getDownloadJob(
+  jobId: string,
+): Promise<DownloadJobResponse> {
+  const response = await fetch(`${API_URL}/downloads/${jobId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch download job");
   }
 
   return response.json();
