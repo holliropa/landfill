@@ -1,5 +1,5 @@
 ﻿import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { uploadFiles } from "@/lib/client/api.ts";
+import { renameFile, uploadFiles } from "@/lib/client/api.ts";
 import { folderKeys } from "@/lib/client/keys.ts";
 
 export function useUploadFiles() {
@@ -16,6 +16,20 @@ export function useUploadFiles() {
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({
         queryKey: folderKeys.content(variables.parentFolderId),
+      });
+    },
+  });
+}
+
+export function useRenameFile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ fileId, newName }: { fileId: string; newName: string }) =>
+      renameFile(fileId, newName),
+    onSuccess: async (_data) => {
+      await queryClient.invalidateQueries({
+        queryKey: folderKeys.content(_data.folderId ?? "root"),
       });
     },
   });

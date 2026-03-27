@@ -4,6 +4,7 @@ import {
   deleteFile,
   downloadFile,
   getFileThumbnail,
+  renameFile,
   uploadFiles,
 } from "@/controllers/file.controller";
 import { FileService, UPLOAD_DIR } from "@/services/file.service";
@@ -21,6 +22,7 @@ const upload = multer({ storage });
 
 router.post("/", upload.array("files"), uploadFiles);
 router.delete("/:id", deleteFile);
+router.patch("/:id", renameFile);
 router.get("/:id/download", downloadFile);
 router.get("/:id/thumbnail", getFileThumbnail);
 

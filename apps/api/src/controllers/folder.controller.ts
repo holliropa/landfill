@@ -162,3 +162,24 @@ export async function getFolderPath(req: Request, res: Response) {
     res.status(500).json({ error: "Failed to fetch folder path" });
   }
 }
+
+export async function renameFolder(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+  const { name } = req.body as { name: string };
+
+  if (!id || !name)
+    return res.status(400).json({ error: "Folder ID and name are required" });
+
+  try {
+    const folder = await prisma.folder.update({
+      where: { id },
+      data: { name },
+      select: { id: true, name: true, parentFolderId: true, createdAt: true },
+    });
+
+    return res.status(200).json(folder);
+  } catch (error) {
+    console.log("Error renaming folder: ", error);
+    res.status(500).json({ error: "Failed to rename folder" });
+  }
+}

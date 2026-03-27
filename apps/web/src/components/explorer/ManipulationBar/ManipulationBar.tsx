@@ -4,6 +4,8 @@ import {
   getArchiveDownloadUrl,
   getDownloadJob,
   getFileDownloadUrl,
+  useRenameFile,
+  useRenameFolder,
 } from "@/lib/client";
 import { useState } from "react";
 
@@ -24,6 +26,22 @@ export function ManipulationBar({
 }: ManipulationBarProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
+  const { mutateAsync: renameFile } = useRenameFile();
+  const { mutateAsync: renameFolder } = useRenameFolder();
+
+  const handleRename = async () => {
+    if (selectedItems.length !== 1) return;
+
+    const newName = window.prompt("Enter new name:", selectedItems[0].name);
+
+    if (!newName?.trim()) return;
+
+    if (selectedItems[0].kind === "file") {
+      await renameFile({ fileId: selectedItems[0].id, newName });
+    } else if (selectedItems[0].kind === "folder") {
+      await renameFolder({ folderId: selectedItems[0].id, newName });
+    }
+  };
 
   const handleDownload = async () => {
     if (selectedItems.length === 0 || isDownloading) return;
@@ -96,9 +114,16 @@ export function ManipulationBar({
       {downloadStatus ? <span>{downloadStatus}</span> : null}
       <div
         style={{
+          display: "flex",
           marginLeft: "auto",
+          gap: "8px",
         }}
       >
+        {selectedItems.length === 1 && (
+          <button onClick={handleRename}>
+            <span>Rename</span>
+          </button>
+        )}
         <button onClick={handleDownload} disabled={isDownloading}>
           {isDownloading ? "Preparing..." : "Download"}
         </button>

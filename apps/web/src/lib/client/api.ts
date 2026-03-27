@@ -133,3 +133,41 @@ export async function getDownloadJob(
 
   return response.json();
 }
+
+export async function renameFile(
+  fileId: string,
+  newName: string,
+): Promise<FileItem> {
+  const response = await fetch(`${API_URL}/files/${fileId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: newName }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to rename file");
+  }
+
+  return response.json();
+}
+
+export async function renameFolder(
+  folderId: string,
+  newName: string,
+): Promise<FolderItem> {
+  const response = await fetch(`${API_URL}/folders/${folderId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: newName }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to rename folder");
+  }
+
+  return response.json();
+}

@@ -8,8 +8,6 @@
 }
 
 export type FileItem = {
-  kind: "file";
-
   id: string;
   name: string;
   size: number;
@@ -19,8 +17,6 @@ export type FileItem = {
 };
 
 export type FolderItem = {
-  kind: "folder";
-
   id: string;
   name: string;
   parentFolderId: string | null;

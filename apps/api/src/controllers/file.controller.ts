@@ -142,3 +142,37 @@ export async function getFileThumbnail(req: Request, res: Response) {
     res.status(500).json({ error: "Failed to generate thumbnail" });
   }
 }
+
+export async function renameFile(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+  const { name } = req.body as { name: string };
+
+  if (!id || !name) {
+    return res.status(400).json({ error: "File ID and name are required" });
+  }
+
+  try {
+    const updatedFile = await prisma.file.update({
+      where: { id },
+      data: { originalName: name },
+      select: {
+        id: true,
+        originalName: true,
+        size: true,
+        mimeType: true,
+        createdAt: true,
+        folderId: true,
+      },
+    });
+
+    const { originalName, ...fileWithoutName } = updatedFile;
+
+    return res.status(200).json({
+      ...fileWithoutName,
+      name: originalName,
+    });
+  } catch (error) {
+    console.error("Error renaming file: ", error);
+    res.status(500).json({ error: "Failed to rename file" });
+  }
+}
