@@ -1,13 +1,18 @@
 ﻿import type { ExplorerItem } from "@/components/Explorer";
 import {
   createDownload,
+  deleteFile,
+  deleteFolder,
   getArchiveDownloadUrl,
   getDownloadJob,
   getFileDownloadUrl,
+  useDeleteFile,
   useRenameFile,
   useRenameFolder,
 } from "@/lib/client";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { folderKeys } from "@/lib/client/keys.ts";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,6 +33,37 @@ export function ManipulationBar({
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const { mutateAsync: renameFile } = useRenameFile();
   const { mutateAsync: renameFolder } = useRenameFolder();
+  const queryClient = useQueryClient();
+
+  const handleDelete = async () => {
+    if (selectedItems.length === 0) return;
+
+    const confirmDelete = window.confirm(
+      selectedItems.length === 1
+        ? `Are you sure you want to delete ${selectedItems[0].name}?`
+        : `Are you sure you want to delete ${selectedItems.length} items?`,
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await Promise.all(
+        selectedItems.map(async (item) => {
+          if (item.kind === "file") {
+            await deleteFile(item.id);
+          } else if (item.kind === "folder") {
+            await deleteFolder(item.id);
+          }
+        }),
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: folderKeys.content(folderId),
+      });
+    } catch (error) {
+      console.error("Failed to delete", error);
+    }
+  };
 
   const handleRename = async () => {
     if (selectedItems.length !== 1) return;
@@ -127,6 +163,7 @@ export function ManipulationBar({
         <button onClick={handleDownload} disabled={isDownloading}>
           {isDownloading ? "Preparing..." : "Download"}
         </button>
+        <button onClick={handleDelete}>Delete</button>
       </div>
     </div>
   );

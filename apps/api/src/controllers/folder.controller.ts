@@ -1,5 +1,7 @@
 ﻿import { Request, Response } from "express";
 import { prisma } from "@/lib/prisma";
+import { FolderService } from "@/services/folder.service";
+import { FileService } from "@/services/file.service";
 
 export async function getFolder(req: Request, res: Response) {
   const { id } = req.params as { id: string };
@@ -181,5 +183,45 @@ export async function renameFolder(req: Request, res: Response) {
   } catch (error) {
     console.log("Error renaming folder: ", error);
     res.status(500).json({ error: "Failed to rename folder" });
+  }
+}
+
+export async function deleteFolder(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+
+  if (!id) {
+    return res.status(400).json({ error: "Folder ID is required" });
+  }
+
+  if (id === FolderService.rootFolderId) {
+    return res.status(400).json({ error: "Cannot delete root folder" });
+  }
+
+  try {
+    const folderIds = await FolderService.collectSubtreeIds(id);
+
+    const filesToDelete = await prisma.file.findMany({
+      where: { folderId: { in: folderIds } },
+      select: { diskName: true },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.file.deleteMany({
+        where: { folderId: { in: folderIds } },
+      });
+
+      await tx.folder.delete({
+        where: { id },
+      });
+    });
+
+    filesToDelete.forEach(({ diskName }) =>
+      FileService.deleteFromDisk(diskName),
+    );
+
+    return res.status(204).end();
+  } catch (error) {
+    console.log("Error deleting folder: ", error);
+    res.status(500).json({ error: "Failed to delete folder" });
   }
 }

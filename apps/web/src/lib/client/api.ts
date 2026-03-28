@@ -171,3 +171,23 @@ export async function renameFolder(
 
   return response.json();
 }
+
+export async function deleteFile(fileId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/files/${fileId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete file");
+  }
+}
+
+export async function deleteFolder(folderId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/folders/${folderId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete folder");
+  }
+}

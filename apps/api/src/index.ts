@@ -18,7 +18,6 @@ app.use("/api/downloads", downloadRoutes);
 void DownloadService.cleanupExpiredJobs();
 setInterval(
   () => {
-    console.info("Running cleanupExpiredJobs");
     void DownloadService.cleanupExpiredJobs();
   },
   1000 * 60 * 10,

@@ -1,5 +1,5 @@
 ﻿import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { renameFile, uploadFiles } from "@/lib/client/api.ts";
+import { deleteFile, renameFile, uploadFiles } from "@/lib/client/api.ts";
 import { folderKeys } from "@/lib/client/keys.ts";
 
 export function useUploadFiles() {
@@ -32,5 +32,11 @@ export function useRenameFile() {
         queryKey: folderKeys.content(_data.folderId ?? "root"),
       });
     },
+  });
+}
+
+export function useDeleteFile() {
+  return useMutation({
+    mutationFn: ({ fileId }: { fileId: string }) => deleteFile(fileId),
   });
 }
