@@ -1,49 +1,19 @@
 ﻿import { ExplorerList } from "../ExplorerList";
-import React, { useMemo, useState } from "react";
-import { useFolderContent } from "@/lib/client";
+import React, { useState } from "react";
 import type { ExplorerItem } from "../types";
-import { FolderIcon } from "lucide-react";
-import { FileThumbnail } from "@/components/FileThumbnail";
 import { useNavigate } from "react-router-dom";
-import { NavigationBar } from "../NavigationBar";
 import { ManipulationBar } from "@/components/Explorer/ManipulationBar";
 
 type ExplorerViewProps = {
-  folderId: string;
+  items: ExplorerItem[];
 };
 
-export function Explorer({ folderId }: ExplorerViewProps) {
+export function Explorer({ items }: ExplorerViewProps) {
   const navigate = useNavigate();
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
     null,
   );
-
-  const { data: folderContent } = useFolderContent(folderId);
-
-  const items = useMemo<ExplorerItem[]>(() => {
-    const folderItems = (folderContent?.folders ?? []).map((folder) => ({
-      key: `${folder.kind}:${folder.id}`,
-      id: folder.id,
-      kind: "folder" as const,
-      name: folder.name,
-      createdAt: folder.createdAt,
-      size: null,
-      ThumbnailComponent: <FolderIcon size={18} />,
-    }));
-
-    const fileItems = (folderContent?.files ?? []).map((file) => ({
-      key: `${file.kind}:${file.id}`,
-      id: file.id,
-      kind: "file" as const,
-      name: file.name,
-      createdAt: file.createdAt,
-      size: file.size,
-      ThumbnailComponent: <FileThumbnail fileId={file.id} alt={file.name} />,
-    }));
-
-    return [...folderItems, ...fileItems];
-  }, [folderContent]);
 
   const handleOpenItem = (index: number) => {
     const item = items[index];
@@ -122,24 +92,11 @@ export function Explorer({ folderId }: ExplorerViewProps) {
           padding: "8px 12px",
           borderBottom: "1px solid #d0d0d0",
           userSelect: "none",
-        }}
-      >
-        <NavigationBar folderId={folderId} />
-      </div>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          flex: "0 0 auto",
-          padding: "8px 12px",
-          borderBottom: "1px solid #d0d0d0",
-          userSelect: "none",
           minHeight: "40px",
         }}
       >
         {selectedKeys.size > 0 && (
           <ManipulationBar
-            folderId={folderId}
             selectedItems={items.filter((item) => selectedKeys.has(item.key))}
             onDeselectAll={resetSelection}
           />

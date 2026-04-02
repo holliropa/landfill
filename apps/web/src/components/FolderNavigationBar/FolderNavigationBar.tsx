@@ -6,7 +6,7 @@ export type NavigationBarProps = {
   folderId: string;
 };
 
-export function NavigationBar({ folderId }: NavigationBarProps) {
+export function FolderNavigationBar({ folderId }: NavigationBarProps) {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { mutateAsync: createFolder } = useCreateFolder();

@@ -6,26 +6,21 @@ import {
   getArchiveDownloadUrl,
   getDownloadJob,
   getFileDownloadUrl,
-  useDeleteFile,
   useRenameFile,
   useRenameFolder,
 } from "@/lib/client";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { folderKeys } from "@/lib/client/keys.ts";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export type ManipulationBarProps = {
-  folderId: string;
   selectedItems: ExplorerItem[];
   onDeselectAll: () => void;
 };
 
 export function ManipulationBar({
-  folderId,
   selectedItems,
   onDeselectAll,
 }: ManipulationBarProps) {
@@ -33,7 +28,6 @@ export function ManipulationBar({
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const { mutateAsync: renameFile } = useRenameFile();
   const { mutateAsync: renameFolder } = useRenameFolder();
-  const queryClient = useQueryClient();
 
   const handleDelete = async () => {
     if (selectedItems.length === 0) return;
@@ -56,10 +50,6 @@ export function ManipulationBar({
           }
         }),
       );
-
-      await queryClient.invalidateQueries({
-        queryKey: folderKeys.content(folderId),
-      });
     } catch (error) {
       console.error("Failed to delete", error);
     }

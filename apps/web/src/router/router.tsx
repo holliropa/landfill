@@ -1,6 +1,7 @@
-﻿import { createBrowserRouter } from "react-router-dom";
+﻿import { createBrowserRouter, Navigate } from "react-router-dom";
 import { MainLayout } from "@/layouts";
-import { ExplorerPage, Home } from "@/pages";
+import { ExplorerPage } from "@/pages/ExplorerPage";
+import { SearchPage } from "@/pages/SearchPage";
 
 export const router = createBrowserRouter([
   {
@@ -9,7 +10,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Home />,
+        element: <Navigate to="/folder" replace />,
       },
       {
         path: "folder",
@@ -18,6 +19,10 @@ export const router = createBrowserRouter([
       {
         path: "folder/:folderId",
         element: <ExplorerPage />,
+      },
+      {
+        path: "search",
+        element: <SearchPage />,
       },
     ],
   },

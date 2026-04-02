@@ -1,0 +1,84 @@
+﻿/* ==============================
+   Sidebar Layout & States
+   ============================== */
+
+.sidebarContainer {
+    flex-shrink: 0;
+    background: var(--bg);
+    transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.open {
+    width: 220px;
+}
+
+.collapsed {
+    width: 64px;
+}
+
+/* ==============================
+   Navigation Items
+   ============================== */
+
+.navContent {
+    padding: 80px 12px 40px 12px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    padding: 8px 0;
+    transition: background-color 0.2s ease;
+}
+
+.navItem:hover {
+    background-color: #f3f4f6;
+}
+
+.icon {
+    font-size: 24px;
+    min-width: 40px; /* Crucial: 40px + 10px padding on left/right = perfect 60px centering */
+    text-align: center;
+    display: flex;
+    justify-content: center;
+}
+
+/* ==============================
+   Text Grid Animation Magic
+   ============================== */
+
+.textWrapper {
+    display: grid;
+    transition: grid-template-columns 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    align-items: center;
+
+    overflow: hidden;
+    min-width: 0;
+}
+
+.textOpen {
+    grid-template-columns: 1fr; /* Opens up to the exact width of the text */
+    opacity: 1;
+}
+
+.textClosed {
+    grid-template-columns: 0fr; /* Squeezes shut to 0px */
+    opacity: 0;
+}
+
+.textInner {
+    overflow: hidden;
+    white-space: nowrap; /* Prevents text from wrapping/stacking while animating */
+    font-size: 15px;
+    color: var(--text);
+
+    min-width: 0;
+}

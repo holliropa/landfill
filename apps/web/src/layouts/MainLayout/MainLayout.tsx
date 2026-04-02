@@ -1,15 +1,21 @@
 ﻿import styles from "./MainLayout.module.css";
 import { Outlet } from "react-router-dom";
-import { NavBar } from "@/components/NavBar";
+import { Sidebar } from "@/components/Sidebar/Sidebar.tsx";
+import { Topbar } from "@/components/Topbar/Topbar.tsx";
 
 export function MainLayout() {
   return (
     <div className={styles.layout}>
-      <div className={styles.navbarContainer}>
-        <NavBar />
-      </div>
       <main className={styles.mainContent}>
-        <Outlet />
+        <Sidebar />
+        <div className={styles.sidebarBorder} />
+        <div className={styles.pageLayout}>
+          <Topbar />
+          <div className={styles.pageBorder} />
+          <div className={styles.pageContent}>
+            <Outlet />
+          </div>
+        </div>
       </main>
     </div>
   );

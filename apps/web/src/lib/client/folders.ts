@@ -12,7 +12,6 @@ export function useFolderContent(folderId: string) {
   return useQuery({
     queryKey: folderKeys.content(folderId),
     queryFn: () => getFolderContent(folderId),
-    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -20,7 +19,6 @@ export function useFolderPath(folderId: string) {
   return useQuery({
     queryKey: folderKeys.path(folderId),
     queryFn: () => getFolderPath(folderId),
-    staleTime: 1000 * 60 * 5,
   });
 }
 

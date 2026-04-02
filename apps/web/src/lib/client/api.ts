@@ -1,4 +1,5 @@
 ﻿import type { FileItem, FolderItem } from "@/types";
+import type { StorageItem } from "./types";
 
 const API_URL = "http://localhost:3000/api";
 
@@ -190,4 +191,18 @@ export async function deleteFolder(folderId: string): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete folder");
   }
+}
+
+export type SearchResult = {
+  items: StorageItem[];
+};
+
+export async function searchItems(query: string): Promise<SearchResult> {
+  const response = await fetch(`${API_URL}/storage/search?query=${query}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to search items");
+  }
+
+  return response.json();
 }
