@@ -3,36 +3,52 @@
     flex-direction: column;
     width: max-content;
     min-width: 100%;
+    height: 100%;
     user-select: none;
 }
 
 .header {
     display: grid;
-    align-items: center;
-    user-select: none;
-
     position: sticky;
     top: 0;
-    background: #c6c6c6;
+    z-index: 2;
+    align-items: center;
+    min-height: 42px;
+    background: #242424;
+    backdrop-filter: blur(8px);
 }
 
 .headerCell {
     position: relative;
-    padding: 10px 12px;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    min-height: 42px;
+    padding: 0 14px;
     overflow: hidden;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
     text-overflow: ellipsis;
 }
 
 .resizeHandle {
     position: absolute;
-    top: 0;
-    right: -3px;
-    width: 5px;
-    height: 100%;
+    top: 6px;
+    right: -2px;
+    width: 4px;
+    height: calc(100% - 12px);
+    border-radius: 999px;
+    background: transparent;
     cursor: col-resize;
-    background-color: #30363d;
-    z-index: 2;
+    transition: background-color 120ms ease;
+    z-index: 3;
+}
+
+.headerCell:hover .resizeHandle {
+    background: color-mix(in srgb, var(--border) 90%, transparent);
 }
 
 .body {
@@ -42,17 +58,68 @@
 .row {
     display: grid;
     align-items: center;
-    /*border-bottom: 1px solid #30363d;*/
-}
-
-.cell {
-    padding: 8px 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-height: 44px;
+    border-bottom: 1px solid #333333;
+    transition: background-color 120ms ease;
 }
 
 .row:hover {
-    background-color: rgba(198, 198, 198, 0.4);
+    background: #3c3c3c;
     cursor: pointer;
+}
+
+.selectedRow {
+    background: #4e4e4e;
+}
+
+.selectedRow:hover {
+    background: #333333;
+}
+
+.cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 14px;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 400;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.thumbnailCell {
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.thumbnailBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    overflow: hidden;
+}
+
+.nameCell {
+    font-weight: 500;
+}
+
+.metaCell {
+    font-variant-numeric: tabular-nums;
+}
+
+.emptyState {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    padding: 24px;
+    font-size: 14px;
+    text-align: center;
 }

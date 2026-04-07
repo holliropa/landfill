@@ -1,0 +1,78 @@
+﻿.root {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.root:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--button-focus-ring);
+}
+
+.root:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.icon > svg {
+    display: block;
+    width: 1em;
+    height: 1em;
+}
+
+.small {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+}
+
+.medium {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+}
+
+.large {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+}
+
+.square {
+    border-radius: 0;
+}
+
+.rounded {
+    border-radius: 8px;
+}
+
+.circle {
+    border-radius: 9999px;
+}
+
+.primary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+
+.primary:hover:not(:disabled) {
+    background: var(--surface-hover);
+}

@@ -1,6 +1,11 @@
-﻿import React, { useRef } from "react";
+﻿import styles from "./FolderNavigationBar.module.css";
+import React, { useMemo, useRef } from "react";
 import { useCreateFolder, useFolderPath, useUploadFiles } from "@/lib/client";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/ui/Button";
+import { ArrowLeftIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { FolderBreadcrumbs, type BreadcrumbItem } from "./FolderBreadcrumbs";
+import { IconButton } from "@/ui/IconButton";
 
 export type NavigationBarProps = {
   folderId: string;
@@ -40,38 +45,54 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
     e.target.value = "";
   };
 
-  const handleOpenFolder = (folderId: string) => {
-    navigate(`/folder/${folderId}`);
+  const handleOpenFolder = (nextFolderId: string) => {
+    navigate(`/folder/${nextFolderId}`);
   };
 
-  const breadcrumbs = folderPath?.path ?? [];
+  const breadcrumbs = useMemo<BreadcrumbItem[]>(() => {
+    if (!folderPath) return [];
+
+    return folderPath.path ?? [];
+  }, [folderPath]);
 
   return (
-    <>
-      {breadcrumbs.map((breadcrumb) => (
-        <div key={breadcrumb.id}>
-          <span
-            style={{ marginRight: "4px", cursor: "pointer" }}
-            onClick={() => {
-              if (breadcrumb.id !== folderId) handleOpenFolder(breadcrumb.id);
-            }}
-          >
-            {breadcrumb.name}
-          </span>
-          <span style={{ marginRight: "4px" }}>/</span>
-        </div>
-      ))}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          flex: "1 1 auto",
-          justifyContent: "flex-end",
-          gap: "8px",
+    <div className={styles.bar}>
+      <IconButton
+        shape="rounded"
+        icon={<ArrowLeftIcon />}
+        disabled={!folderPath || folderPath.path.length === 1}
+        onClick={() => {
+          if (!folderPath || folderPath.path.length === 1) return;
+
+          handleOpenFolder(folderPath.path[folderPath.path.length - 2].id);
         }}
-      >
-        <button onClick={handleCreateFolder}>CREATE FOLDER</button>
-        <button onClick={() => fileInputRef.current?.click()}>ADD FILES</button>
+      />
+
+      <FolderBreadcrumbs
+        items={breadcrumbs}
+        currentFolderId={folderId}
+        onClick={handleOpenFolder}
+      />
+
+      <div className={styles.actions}>
+        <Button
+          variant="outlined"
+          size="medium"
+          onClick={handleCreateFolder}
+          startIcon={<PlusIcon />}
+          className={styles.actionButton}
+        >
+          Create Folder
+        </Button>
+        <Button
+          variant="outlined"
+          size="medium"
+          onClick={() => fileInputRef.current?.click()}
+          startIcon={<UploadIcon />}
+          className={styles.actionButton}
+        >
+          Add Files
+        </Button>
       </div>
 
       <input
@@ -81,6 +102,6 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
         multiple
         onChange={handleFileInputChange}
       />
-    </>
+    </div>
   );
 }

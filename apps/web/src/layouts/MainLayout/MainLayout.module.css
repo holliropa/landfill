@@ -30,7 +30,7 @@
     bottom: 0;
     right: 0;
     width: 2px;
-    background-color: var(--border-color);
+    background-color: var(--divider-color);
 }
 
 .pageBorder {
@@ -39,7 +39,7 @@
     right: 0;
     bottom: 0;
     height: 2px;
-    background-color: var(--border-color);
+    background-color: var(--divider-color);
 }
 
 .pageContent {

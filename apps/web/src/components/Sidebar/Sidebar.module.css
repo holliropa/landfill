@@ -4,7 +4,7 @@
 
 .sidebarContainer {
     flex-shrink: 0;
-    background: var(--bg);
+    background: rgb(38 38 38);
     transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
     overflow-x: hidden;
     display: flex;

@@ -48,12 +48,14 @@ export function SearchPage() {
           display: "flex",
           flexDirection: "row",
           flex: "0 0 auto",
-          padding: "8px 12px",
-          borderBottom: "1px solid #d0d0d0",
+          padding: "8px 16px",
+          borderBottom: "2px solid var(--divider-color)",
           userSelect: "none",
         }}
       >
-        <span>Search results for "{query}"</span>
+        <span style={{
+          fontSize: "20px",
+        }}>Search results</span>
       </div>
       <div
         style={{

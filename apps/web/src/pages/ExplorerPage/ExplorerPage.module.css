@@ -1,0 +1,23 @@
+﻿.root {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+}
+
+.navigation {
+    /*display: flex;*/
+    /*flex-direction: row;*/
+    /*flex: 0 0 auto;*/
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--divider-color);
+    user-select: none;
+}
+
+.content {
+    /*flex: 1 1 auto;*/
+    min-height: 0;
+    min-width: 0;
+    /*overflow: auto;*/
+    /*display: flex;*/
+    /*flex-direction: column;*/
+}

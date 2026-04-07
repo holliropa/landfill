@@ -1,0 +1,134 @@
+﻿.root {
+    position: relative;
+    display: inline-flex;
+    padding: 0;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.background {
+    position: absolute;;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid;
+    background: transparent;
+    transition: background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.1s ease,
+    opacity 0.2s ease;
+}
+
+.content {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 6px;
+    min-width: 0;
+    font-weight: 500;
+    line-height: 1;
+    border-radius: inherit;
+}
+
+.label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.root:hover:not(:disabled) .background {
+    transform: translateY(0);
+}
+
+.root:active:not(:disabled) .background {
+    transform: translateY(1px);
+}
+
+.root:focus-visible {
+    outline: none;
+}
+
+.root:focus-visible .background {
+    box-shadow: 0 0 0 3px var(--button-focus-ring);
+}
+
+.root:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.contained .background {
+    background: var(--button-contained-bg);
+    border-color: var(--button-contained-border);
+}
+
+.contained:hover:not(:disabled) .background {
+    background: var(--button-contained-bg-hover);
+    border-color: var(--button-contained-border);
+}
+
+.contained .content {
+    color: var(--button-contained-text);
+}
+
+.outlined .background {
+    background: var(--button-outlined-bg);
+    border-color: var(--button-outlined-border);
+}
+
+.outlined:hover:not(:disabled) .background {
+    background: var(--button-outlined-bg-hover);
+    border-color: var(--button-outlined-border);
+}
+
+.outlined .content {
+    color: var(--button-outlined-text);
+}
+
+.text .background {
+    background: transparent;
+    border-color: transparent;
+}
+
+.text:hover:not(:disabled) .background {
+    background: var(--button-text-bg-hover);
+}
+
+.text .content {
+    color: var(--button-text-bg-hover);
+}
+
+.small .content{
+    min-height: 30px;
+    font-size: 15px;
+}
+
+.medium .content{
+    min-height: 36px;
+    font-size: 16px;
+}
+
+.large .content{
+    min-height: 40px;
+    font-size: 17px;
+}
+
+.fullWidth{
+    width: 100%;
+}

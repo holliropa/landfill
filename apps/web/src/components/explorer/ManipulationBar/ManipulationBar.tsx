@@ -10,6 +10,9 @@ import {
   useRenameFolder,
 } from "@/lib/client";
 import { useState } from "react";
+import { Button } from "@/ui/Button";
+import { XIcon } from "lucide-react";
+import { IconButton } from "@/ui/IconButton";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -135,7 +138,7 @@ export function ManipulationBar({
         gap: "8px",
       }}
     >
-      <button onClick={onDeselectAll}>x</button>
+      <IconButton size="small" onClick={onDeselectAll} icon={<XIcon />} />
       <span>{selectedItems.length} selected</span>
       {downloadStatus ? <span>{downloadStatus}</span> : null}
       <div
@@ -146,14 +149,21 @@ export function ManipulationBar({
         }}
       >
         {selectedItems.length === 1 && (
-          <button onClick={handleRename}>
+          <Button variant="outlined" size="small" onClick={handleRename}>
             <span>Rename</span>
-          </button>
+          </Button>
         )}
-        <button onClick={handleDownload} disabled={isDownloading}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={handleDownload}
+          disabled={isDownloading}
+        >
           {isDownloading ? "Preparing..." : "Download"}
-        </button>
-        <button onClick={handleDelete}>Delete</button>
+        </Button>
+        <Button variant="outlined" size="small" onClick={handleDelete}>
+          Delete
+        </Button>
       </div>
     </div>
   );

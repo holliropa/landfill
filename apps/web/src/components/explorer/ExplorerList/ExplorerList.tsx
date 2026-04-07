@@ -24,10 +24,10 @@ export function ExplorerList({
   onItemClick,
 }: ExplorerListProps) {
   const [columns, setColumns] = useState<Column[]>([
-    { key: "thumbnail", label: "", width: 40, minWidth: 40, resizable: false },
-    { key: "name", label: "Name", width: 300, minWidth: 100, resizable: true },
-    { key: "date", label: "Date", width: 150, minWidth: 100, resizable: true },
-    { key: "size", label: "Size", width: 100, minWidth: 100, resizable: true },
+    { key: "thumbnail", label: "", width: 48, minWidth: 48, resizable: false },
+    { key: "name", label: "Name", width: 320, minWidth: 140, resizable: true },
+    { key: "date", label: "Date", width: 170, minWidth: 120, resizable: true },
+    { key: "size", label: "Size", width: 110, minWidth: 100, resizable: true },
   ]);
 
   const dragStateRef = useRef<{
@@ -85,14 +85,9 @@ export function ExplorerList({
 
   return (
     <div className={styles.container}>
-      <div
-        className={styles.header}
-        style={{
-          gridTemplateColumns,
-        }}
-      >
+      <div className={styles.header} style={{ gridTemplateColumns }}>
         {columns.map((column, index) => (
-          <div key={index} className={styles.headerCell}>
+          <div key={column.key} className={styles.headerCell}>
             <span>{column.label}</span>
 
             {index < columns.length - 1 && (
@@ -106,42 +101,41 @@ export function ExplorerList({
       </div>
 
       <div className={styles.body}>
-        {items.map((item, index) => {
-          return (
-            <div
-              key={item.key}
-              className={styles.row}
-              style={{
-                gridTemplateColumns,
-                backgroundColor: selectedKeys.has(item.key)
-                  ? "#f0f0f0"
-                  : undefined,
-              }}
-              onClick={(event) => onItemClick(index, event)}
-              onDoubleClick={() => onItemOpen(index)}
-            >
-              <div className={styles.cell}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    width: "20px",
-                    height: "20px",
-                    flex: "0 0 20px",
-                  }}
-                >
-                  {item.ThumbnailComponent}
+        {items.length === 0 ? (
+          <div className={styles.emptyState}>This folder is empty.</div>
+        ) : (
+          items.map((item, index) => {
+            const isSelected = selectedKeys.has(item.key);
+
+            return (
+              <div
+                key={item.key}
+                className={`${styles.row} ${isSelected ? styles.selectedRow : ""}`}
+                style={{ gridTemplateColumns }}
+                onClick={(event) => onItemClick(index, event)}
+                onDoubleClick={() => onItemOpen(index)}
+              >
+                <div className={`${styles.cell} ${styles.thumbnailCell}`}>
+                  <div className={styles.thumbnailBox}>
+                    {item.ThumbnailComponent}
+                  </div>
+                </div>
+
+                <div className={`${styles.cell} ${styles.nameCell}`}>
+                  {item.name}
+                </div>
+
+                <div className={`${styles.cell} ${styles.metaCell}`}>
+                  {formatDate(item.createdAt)}
+                </div>
+
+                <div className={`${styles.cell} ${styles.metaCell}`}>
+                  {item.size ? formatSize(item.size) : ""}
                 </div>
               </div>
-              <div className={styles.cell}>{item.name}</div>
-              <div className={styles.cell}>{formatDate(item.createdAt)}</div>
-              <div className={styles.cell}>
-                {item.size ? formatSize(item.size) : ""}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,62 @@
+﻿.bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 36px;
+    width: 100%;
+}
+
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    font-size: 18px;
+}
+
+.breadcrumbItem {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    opacity: 0.85;
+}
+
+.breadcrumbItem:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.breadcrumbCurrent {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.separator {
+    color: var(--text);
+    opacity: 0.45;
+    flex-shrink: 0;
+    font-size: 20px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.actionButton {
+}
