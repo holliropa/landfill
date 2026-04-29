@@ -1,135 +1,90 @@
-# Turborepo starter
+# Landfill
 
-This Turborepo starter is maintained by the Turborepo core team.
+Landfill is a local file storage app built as an npm workspaces monorepo. The
+web app provides a folder explorer, uploads, search, file downloads, archive
+downloads, and basic item details. The API stores metadata in SQLite through
+Prisma and writes uploaded files to disk.
 
-## Using this example
+## Apps
 
-Run the following command:
+- `apps/web`: Vite, React, React Router, and TanStack Query client.
+- `apps/api`: Express API, Prisma, SQLite, Multer uploads, Sharp thumbnails, and
+  Archiver download jobs.
+
+## Requirements
+
+- Node.js 18 or newer.
+- npm 10.9.2 or compatible.
+
+## Setup
+
+Install dependencies from the repository root:
 
 ```sh
-npx create-turbo@latest
+npm install
 ```
 
-## What's inside?
+Create or update `apps/api/.env`:
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```sh
+DATABASE_URL="file:./dev.db"
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Apply Prisma migrations from the API workspace when the database needs to be
+created or updated:
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```sh
+npm exec prisma migrate dev --workspace @landfill/api
 ```
 
-### Develop
+Generate the Prisma client after schema changes:
 
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```sh
+npm exec prisma generate --workspace @landfill/api
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Development
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+Run both apps through Turbo:
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```sh
+npm run dev
 ```
 
-### Remote Caching
+The API listens on `http://localhost:3000` and exposes routes under `/api`.
+The web app is served by Vite, usually on `http://localhost:5173`.
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## Scripts
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+- `npm run dev`: start all workspace development servers.
+- `npm run build`: build all workspaces.
+- `npm run lint`: run workspace lint tasks.
+- `npm run check-types`: run TypeScript checks for the web and API workspaces.
+- `npm run format`: format TypeScript, TSX, and Markdown files with Prettier.
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+Workspace scripts:
 
-```
-cd my-turborepo
+- `npm run check-types --workspace @landfill/web`: `tsc -b --noEmit`.
+- `npm run check-types --workspace @landfill/api`: `tsc --noEmit`.
+- `npm run lint --workspace @landfill/web`: ESLint for the web app.
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
+## Architecture Notes
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
+The web client keeps server state in TanStack Query. Folder content queries use
+`folderKeys.content(folderId)` and mutations invalidate the affected folder
+after create, upload, rename, and delete operations.
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+The API owns persistence and file processing:
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+- Folder and file metadata live in SQLite through Prisma models.
+- Uploaded files are stored on disk with metadata retained in the database.
+- Thumbnail requests are generated through the existing file thumbnail route.
+- Multi-item downloads create `DownloadJob` records and archive files that can
+  be polled and downloaded when ready.
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
+## Prisma Notes
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Prisma config lives in `apps/api/prisma.config.ts`. The schema is split under
+`apps/api/prisma/schema`, with migrations under `apps/api/prisma/migrations`.
+The development SQLite database is `apps/api/dev.db` when using the default
+`DATABASE_URL`.
