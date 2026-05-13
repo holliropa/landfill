@@ -10,9 +10,15 @@ import {
   useRenameFolder,
 } from "@/lib/client";
 import { useState } from "react";
-import { Button } from "@/ui/Button";
-import { XIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  FileEditIcon,
+  InfoIcon,
+  TrashIcon,
+  XIcon,
+} from "lucide-react";
 import { IconButton } from "@/ui/IconButton";
+import { SpinnerIcon } from "@/ui/SpinnerIcon";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,11 +27,13 @@ function sleep(ms: number) {
 export type ManipulationBarProps = {
   selectedItems: ExplorerItem[];
   onDeselectAll: () => void;
+  onShowDetails: () => void;
 };
 
 export function ManipulationBar({
   selectedItems,
   onDeselectAll,
+  onShowDetails,
 }: ManipulationBarProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
@@ -138,8 +146,17 @@ export function ManipulationBar({
         gap: "8px",
       }}
     >
-      <IconButton size="small" onClick={onDeselectAll} icon={<XIcon />} />
-      <span>{selectedItems.length} selected</span>
+      {selectedItems.length > 0 && (
+        <>
+          <IconButton
+            size="medium"
+            variant="ghost"
+            onClick={onDeselectAll}
+            icon={<XIcon />}
+          />
+          <span>{selectedItems.length} selected</span>
+        </>
+      )}
       {downloadStatus ? <span>{downloadStatus}</span> : null}
       <div
         style={{
@@ -148,22 +165,29 @@ export function ManipulationBar({
           gap: "8px",
         }}
       >
-        {selectedItems.length === 1 && (
-          <Button variant="outlined" size="small" onClick={handleRename}>
-            <span>Rename</span>
-          </Button>
-        )}
-        <Button
-          variant="outlined"
-          size="small"
+        <IconButton
+          variant="ghost"
+          icon={<FileEditIcon />}
+          onClick={handleRename}
+          disabled={selectedItems.length === 0 || selectedItems.length > 1}
+        />
+        <IconButton
+          variant="ghost"
           onClick={handleDownload}
-          disabled={isDownloading}
-        >
-          {isDownloading ? "Preparing..." : "Download"}
-        </Button>
-        <Button variant="outlined" size="small" onClick={handleDelete}>
-          Delete
-        </Button>
+          disabled={isDownloading || selectedItems.length === 0}
+          icon={isDownloading ? <SpinnerIcon /> : <DownloadIcon />}
+        />
+        <IconButton
+          variant="ghost"
+          onClick={handleDelete}
+          icon={<TrashIcon color="#a2030d" />}
+          disabled={selectedItems.length === 0}
+        />
+        <IconButton
+          variant="ghost"
+          icon={<InfoIcon />}
+          onClick={onShowDetails}
+        />
       </div>
     </div>
   );

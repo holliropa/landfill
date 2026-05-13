@@ -8,9 +8,9 @@
     width: clamp(300px, 50%, 600px);
     gap: 8px;
     padding: 8px;
-    background: var(--input-bg);
-    border: 1px solid var(--input-border);
-    border-radius: 4px;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
 }
 
 .searchContainer:focus-within {
@@ -23,6 +23,10 @@
     border: none;
     color: var(--input-text);
     outline: none;
+}
+
+.searchIcon {
+    color: var(--input-placeholder);
 }
 
 .searchInput::placeholder {

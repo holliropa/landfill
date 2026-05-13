@@ -1,9 +1,10 @@
 ﻿.container {
     display: flex;
     flex-direction: column;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
     height: 100%;
+    overflow: auto;
     user-select: none;
 }
 
@@ -13,10 +14,16 @@
     top: 0;
     z-index: 2;
     align-items: center;
+    min-width: 100%;
     min-height: 42px;
-    background: #242424;
-    backdrop-filter: blur(8px);
+    background-color: color-mix(in srgb, var(--bg) 80%, transparent);
+    backdrop-filter: blur(4px);
+    transition: background-color 120ms ease;
 }
+
+/*.header:hover {*/
+/*    background-color: var(--surface);*/
+/*}*/
 
 .headerCell {
     position: relative;
@@ -27,9 +34,8 @@
     padding: 0 14px;
     overflow: hidden;
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 800;
-    text-transform: uppercase;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
@@ -47,33 +53,40 @@
     z-index: 3;
 }
 
+.headerCell:hover {
+    background-color: var(--surface-hover);
+}
+
 .headerCell:hover .resizeHandle {
     background: color-mix(in srgb, var(--border) 90%, transparent);
 }
 
 .body {
-    overflow: auto;
+    width: max-content;
+    min-width: 100%;
 }
 
 .row {
     display: grid;
     align-items: center;
+    width: max-content;
+    min-width: 100%;
     min-height: 44px;
-    border-bottom: 1px solid #333333;
+    border-bottom: 1px solid var(--divider-subtle);
     transition: background-color 120ms ease;
 }
 
 .row:hover {
-    background: #3c3c3c;
+    background: var(--surface-hover);
     cursor: pointer;
 }
 
 .selectedRow {
-    background: #4e4e4e;
+    background: var(--surface-selected);
 }
 
 .selectedRow:hover {
-    background: #333333;
+    background: var(--surface-hover);
 }
 
 .cell {

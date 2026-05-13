@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFolder,
   deleteFolder,
+  getFolder,
   getFolderContent,
   getFolderPath,
   renameFolder,
@@ -65,5 +66,12 @@ export function useRenameFolder() {
 export function useDeleteFolder() {
   return useMutation({
     mutationFn: ({ folderId }: { folderId: string }) => deleteFolder(folderId),
+  });
+}
+
+export function useFolder(folderId: string) {
+  return useQuery({
+    queryKey: folderKeys.byId(folderId),
+    queryFn: () => getFolder(folderId),
   });
 }

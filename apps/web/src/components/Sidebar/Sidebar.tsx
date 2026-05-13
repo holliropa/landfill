@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { SidebarItem } from "./SidebarItem";
 
 export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
@@ -57,7 +57,7 @@ export function Sidebar() {
           <SidebarItem
             onClick={() => {}}
             isOpen={isOpen}
-            Icon={<SettingsIcon />}
+            Icon={<SettingsIcon size={22} />}
             label="Settings"
           />
         </div>

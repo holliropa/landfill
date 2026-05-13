@@ -3,6 +3,7 @@ import multer from "multer";
 import {
   deleteFile,
   downloadFile,
+  getFileById,
   getFileThumbnail,
   renameFile,
   uploadFiles,
@@ -21,6 +22,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.post("/", upload.array("files"), uploadFiles);
+router.get('/:id', getFileById)
 router.delete("/:id", deleteFile);
 router.patch("/:id", renameFile);
 router.get("/:id/download", downloadFile);

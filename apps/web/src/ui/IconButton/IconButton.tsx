@@ -2,7 +2,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 type IconButtonSize = "small" | "medium" | "large";
-type IconButtonVariant = "primary";
+type IconButtonVariant = "primary" | "outlined" | "ghost";
 type IconButtonShape = "square" | "rounded" | "circle";
 
 export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -10,6 +10,7 @@ export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: IconButtonSize;
   variant?: IconButtonVariant;
   shape?: IconButtonShape;
+  enabled?: boolean;
 };
 
 export function IconButton({

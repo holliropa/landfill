@@ -1,0 +1,140 @@
+﻿.root {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 0;
+    padding: 18px;
+    overflow: auto;
+    background: var(--surface);
+}
+
+
+.headerContainer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.titleContainer {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.title {
+    margin: 0;
+
+    overflow-wrap: anywhere;
+
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+
+    min-height: calc(1.2em * 2);
+}
+
+.closeButton {
+    flex: 0 0 auto;
+}
+
+.preview {
+    position: relative;
+    align-self: center;
+    margin-top: 24px;
+    margin-bottom: 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 95%;
+    aspect-ratio: 4 / 3;
+
+    overflow: hidden;
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    background: var(--surface-elevated);
+}
+
+.detailsList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+}
+
+.detailsRow {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 18px;
+    align-items: center;
+}
+
+.detailsRow dt {
+    color: var(--text-muted);
+}
+
+.detailsRow dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text);
+    text-align: right;
+}
+
+.detailsSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.detailsSection h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.tagList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tagList span {
+    max-width: 100%;
+    padding: 5px 9px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activityList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.activityList li::marker {
+    color: rgb(0 255 0);
+}

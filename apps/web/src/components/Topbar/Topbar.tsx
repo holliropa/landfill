@@ -32,12 +32,12 @@ export function Topbar() {
         className={styles.searchContainer}
         onSubmit={handleSubmit}
       >
-        <SearchIcon size={18} />
+        <SearchIcon size={16} className={styles.searchIcon} />
         <input
           key={`${location.pathname}?${location.search}`}
           type="text"
           name="q"
-          placeholder="Search..."
+          placeholder="Search"
           aria-label="Search"
           className={styles.searchInput}
           defaultValue={inputDefaultValue}

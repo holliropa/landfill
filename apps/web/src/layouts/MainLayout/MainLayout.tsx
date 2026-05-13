@@ -1,17 +1,19 @@
 ﻿import styles from "./MainLayout.module.css";
 import { Outlet } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar/Sidebar.tsx";
-import { Topbar } from "@/components/Topbar/Topbar.tsx";
+import { Sidebar } from "@/components/Sidebar/Sidebar";
+import { Topbar } from "@/components/Topbar/Topbar";
 
 export function MainLayout() {
   return (
     <div className={styles.layout}>
       <main className={styles.mainContent}>
-        <Sidebar />
-        <div className={styles.sidebarBorder} />
+        <div className={styles.sidebar}>
+          <Sidebar />
+        </div>
         <div className={styles.pageLayout}>
-          <Topbar />
-          <div className={styles.pageBorder} />
+          <div className={styles.topbar}>
+            <Topbar />
+          </div>
           <div className={styles.pageContent}>
             <Outlet />
           </div>

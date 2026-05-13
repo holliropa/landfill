@@ -1,10 +1,6 @@
-﻿/* ==============================
-   Sidebar Layout & States
-   ============================== */
-
-.sidebarContainer {
+﻿.sidebarContainer {
     flex-shrink: 0;
-    background: rgb(38 38 38);
+    background: var(--surface);
     transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
     overflow-x: hidden;
     display: flex;
@@ -18,10 +14,6 @@
 .collapsed {
     width: 64px;
 }
-
-/* ==============================
-   Navigation Items
-   ============================== */
 
 .navContent {
     padding: 80px 12px 40px 12px;
@@ -40,20 +32,15 @@
 }
 
 .navItem:hover {
-    background-color: #f3f4f6;
+    background-color: var(--surface-hover);
 }
 
 .icon {
-    font-size: 24px;
-    min-width: 40px; /* Crucial: 40px + 10px padding on left/right = perfect 60px centering */
+    min-width: 40px;
     text-align: center;
     display: flex;
     justify-content: center;
 }
-
-/* ==============================
-   Text Grid Animation Magic
-   ============================== */
 
 .textWrapper {
     display: grid;
@@ -65,19 +52,20 @@
 }
 
 .textOpen {
-    grid-template-columns: 1fr; /* Opens up to the exact width of the text */
+    grid-template-columns: 1fr;
     opacity: 1;
 }
 
 .textClosed {
-    grid-template-columns: 0fr; /* Squeezes shut to 0px */
+    grid-template-columns: 0fr;
     opacity: 0;
 }
 
 .textInner {
     overflow: hidden;
-    white-space: nowrap; /* Prevents text from wrapping/stacking while animating */
-    font-size: 15px;
+    white-space: nowrap;
+    font-size: 18px;
+    font-weight: 400;
     color: var(--text);
 
     min-width: 0;

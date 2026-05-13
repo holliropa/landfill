@@ -140,6 +140,54 @@ export async function getFileThumbnail(req: Request, res: Response) {
   }
 }
 
+export async function getFileById(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+
+  if (!id) {
+    return res.status(400).json({ error: "File ID is required" });
+  }
+
+  try {
+    const file = await prisma.file.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        originalName: true,
+        size: true,
+        mimeType: true,
+        createdAt: true,
+        folder: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    return res.status(200).json({
+      id: file.id,
+      name: file.originalName,
+      sizeBytes: file.size,
+      mimeType: file.mimeType,
+      folder: file.folder
+        ? file.folder
+        : {
+            id: "root",
+            name: "root",
+          },
+      createdAt: file.createdAt,
+    });
+  } catch (error) {
+    console.error("Error fetching file: ", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 export async function renameFile(req: Request, res: Response) {
   const { id } = req.params as { id: string };
   const { name } = req.body as { name: string };

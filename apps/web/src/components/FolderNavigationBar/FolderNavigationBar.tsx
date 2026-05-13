@@ -1,11 +1,11 @@
-﻿import styles from "./FolderNavigationBar.module.css";
+import styles from "./FolderNavigationBar.module.css";
 import React, { useMemo, useRef } from "react";
 import { useCreateFolder, useFolderPath, useUploadFiles } from "@/lib/client";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/ui/Button";
-import { ArrowLeftIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { ArrowLeftIcon, FolderPlusIcon, UploadIcon } from "lucide-react";
 import { FolderBreadcrumbs, type BreadcrumbItem } from "./FolderBreadcrumbs";
 import { IconButton } from "@/ui/IconButton";
+import { isRootFolder } from "@/utils";
 
 export type NavigationBarProps = {
   folderId: string;
@@ -19,89 +19,89 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
 
   const { data: folderPath } = useFolderPath(folderId);
 
+  const breadcrumbs = useMemo<BreadcrumbItem[]>(() => {
+    return folderPath?.path ?? [];
+  }, [folderPath]);
+
+  const canGoBack = Boolean(folderPath && folderPath.path.length > 1);
+
   const handleCreateFolder = async () => {
     const name = window.prompt("Enter folder name:");
+    const trimmedName = name?.trim();
 
-    if (!name?.trim()) return;
+    if (!trimmedName) return;
 
     await createFolder({
-      name: name.trim(),
+      name: trimmedName,
       parentFolderId: folderId,
     });
   };
 
   const handleFileInputChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const selected = Array.from(e.target.files ?? []);
+    const selectedFiles = Array.from(event.target.files ?? []);
 
-    if (selected.length > 0) {
+    if (selectedFiles.length > 0) {
       await uploadFiles({
-        files: selected,
+        files: selectedFiles,
         parentFolderId: folderId,
       });
     }
 
-    e.target.value = "";
+    event.target.value = "";
   };
 
   const handleOpenFolder = (nextFolderId: string) => {
-    navigate(`/folder/${nextFolderId}`);
+    navigate(`/folder${isRootFolder(nextFolderId) ? "" : `/${nextFolderId}`}`);
   };
 
-  const breadcrumbs = useMemo<BreadcrumbItem[]>(() => {
-    if (!folderPath) return [];
+  const handleGoBack = () => {
+    if (!folderPath || folderPath.path.length === 1) return;
 
-    return folderPath.path ?? [];
-  }, [folderPath]);
+    const parentFolder = folderPath.path[folderPath.path.length - 2];
+    handleOpenFolder(parentFolder.id);
+  };
 
   return (
-    <div className={styles.bar}>
-      <IconButton
-        shape="rounded"
-        icon={<ArrowLeftIcon />}
-        disabled={!folderPath || folderPath.path.length === 1}
-        onClick={() => {
-          if (!folderPath || folderPath.path.length === 1) return;
+    <nav className={styles.bar} aria-label="Folder navigation">
+      <div className={styles.pathGroup}>
+        <IconButton
+          shape="rounded"
+          variant="ghost"
+          icon={<ArrowLeftIcon />}
+          disabled={!canGoBack}
+          onClick={handleGoBack}
+          aria-label="Go to parent folder"
+        />
 
-          handleOpenFolder(folderPath.path[folderPath.path.length - 2].id);
-        }}
-      />
-
-      <FolderBreadcrumbs
-        items={breadcrumbs}
-        currentFolderId={folderId}
-        onClick={handleOpenFolder}
-      />
+        <FolderBreadcrumbs
+          items={breadcrumbs}
+          currentFolderId={folderId}
+          onClick={handleOpenFolder}
+        />
+      </div>
 
       <div className={styles.actions}>
-        <Button
-          variant="outlined"
-          size="medium"
+        <IconButton
+          variant="ghost"
           onClick={handleCreateFolder}
-          startIcon={<PlusIcon />}
-          className={styles.actionButton}
-        >
-          Create Folder
-        </Button>
-        <Button
-          variant="outlined"
-          size="medium"
+          icon={<FolderPlusIcon />}
+        />
+        <IconButton
+          variant="ghost"
           onClick={() => fileInputRef.current?.click()}
-          startIcon={<UploadIcon />}
-          className={styles.actionButton}
-        >
-          Add Files
-        </Button>
+          icon={<UploadIcon />}
+        />
       </div>
 
       <input
         ref={fileInputRef}
-        hidden
+        className={styles.fileInput}
         type="file"
         multiple
         onChange={handleFileInputChange}
       />
-    </div>
+    </nav>
   );
 }

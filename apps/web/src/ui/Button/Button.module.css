@@ -47,8 +47,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
 }
 
@@ -88,7 +88,6 @@
 }
 
 .outlined .background {
-    background: var(--button-outlined-bg);
     border-color: var(--button-outlined-border);
 }
 
@@ -119,6 +118,11 @@
     font-size: 15px;
 }
 
+.small .icon{
+    width: 14px;
+    height: 14px;
+}
+
 .medium .content{
     min-height: 36px;
     font-size: 16px;
@@ -127,6 +131,11 @@
 .large .content{
     min-height: 40px;
     font-size: 17px;
+}
+
+.large .icon{
+    width: 17px;
+    height: 17px;
 }
 
 .fullWidth{

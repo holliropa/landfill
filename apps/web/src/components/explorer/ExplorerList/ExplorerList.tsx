@@ -90,12 +90,10 @@ export function ExplorerList({
           <div key={column.key} className={styles.headerCell}>
             <span>{column.label}</span>
 
-            {index < columns.length - 1 && (
-              <div
-                className={styles.resizeHandle}
-                onMouseDown={(event) => startResize(event, index)}
-              />
-            )}
+            <div
+              className={styles.resizeHandle}
+              onMouseDown={(event) => startResize(event, index)}
+            />
           </div>
         ))}
       </div>

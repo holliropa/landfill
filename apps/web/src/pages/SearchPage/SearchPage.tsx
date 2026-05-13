@@ -21,9 +21,10 @@ export function SearchPage() {
       name: item.name,
       createdAt: item.createdAt,
       size: item.size,
+      location: item.location,
       ThumbnailComponent:
         item.kind === "folder" ? (
-          <FolderIcon size={18} />
+          <FolderIcon />
         ) : (
           <FileThumbnail fileId={item.id} alt={item.name} />
         ),
@@ -49,13 +50,17 @@ export function SearchPage() {
           flexDirection: "row",
           flex: "0 0 auto",
           padding: "8px 16px",
-          borderBottom: "2px solid var(--divider-color)",
+          borderBottom: "2px solid var(--divider)",
           userSelect: "none",
         }}
       >
-        <span style={{
-          fontSize: "20px",
-        }}>Search results</span>
+        <span
+          style={{
+            fontSize: "20px",
+          }}
+        >
+          Search results
+        </span>
       </div>
       <div
         style={{

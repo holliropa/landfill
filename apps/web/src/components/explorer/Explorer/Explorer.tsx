@@ -1,27 +1,57 @@
 ﻿import styles from "./Explorer.module.css";
 import { ExplorerList } from "../ExplorerList";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { ExplorerItem } from "../types";
 import { useNavigate } from "react-router-dom";
 import { ManipulationBar } from "@/components/Explorer/ManipulationBar";
+import {
+  type DetailsTarget,
+  DetailsView,
+} from "@/components/Explorer/DetailsView";
+import { isRootFolder } from "@/utils";
+import { paths } from "@/router";
 
-type ExplorerViewProps = {
+type ExplorerProps = {
   items: ExplorerItem[];
+  location?: string;
 };
 
-export function Explorer({ items }: ExplorerViewProps) {
+export function Explorer({ items, location }: ExplorerProps) {
   const navigate = useNavigate();
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [showDetails, setShowDetails] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
     null,
   );
+
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedKeys.has(item.key)),
+    [items, selectedKeys],
+  );
+
+  const detailsTarget = useMemo<DetailsTarget>(() => {
+    if (selectedItems.length === 0) {
+      if (location && !isRootFolder(location)) {
+        return { type: "folder", id: location };
+      }
+
+      return { type: "none" };
+    }
+    if (selectedItems.length === 1) {
+      const item = selectedItems[0];
+      return item.kind === "folder"
+        ? { type: "folder", id: item.id }
+        : { type: "file", id: item.id };
+    }
+    return { type: "selection", items: selectedItems };
+  }, [location, selectedItems]);
 
   const handleOpenItem = (index: number) => {
     const item = items[index];
     if (!item) return;
 
     if (item.kind === "folder") {
-      navigate(`/folder/${item.id}`);
+      navigate(paths.folderPath(item.id));
       resetSelection();
     }
   };
@@ -74,23 +104,36 @@ export function Explorer({ items }: ExplorerViewProps) {
     handleToggleSingle(index, !event.ctrlKey && !event.metaKey);
   };
 
+  const toggleDetails = () => {
+    setShowDetails((prevState) => !prevState);
+  };
+
   return (
     <div className={styles.root}>
       <div className={styles.toolbar}>
-        {selectedKeys.size > 0 && (
-          <ManipulationBar
-            selectedItems={items.filter((item) => selectedKeys.has(item.key))}
-            onDeselectAll={resetSelection}
-          />
-        )}
-      </div>
-      <div className={styles.content}>
-        <ExplorerList
-          items={items}
-          selectedKeys={selectedKeys}
-          onItemClick={handleClickItem}
-          onItemOpen={handleOpenItem}
+        <ManipulationBar
+          selectedItems={selectedItems}
+          onDeselectAll={resetSelection}
+          onShowDetails={toggleDetails}
         />
+      </div>
+      <div className={styles.workspace}>
+        <div className={styles.content}>
+          <ExplorerList
+            items={items}
+            selectedKeys={selectedKeys}
+            onItemClick={handleClickItem}
+            onItemOpen={handleOpenItem}
+          />
+        </div>
+        {showDetails && (
+          <aside className={styles.detailsPanel} aria-label="Details">
+            <DetailsView
+              target={detailsTarget}
+              onClose={() => setShowDetails(false)}
+            />
+          </aside>
+        )}
       </div>
     </div>
   );

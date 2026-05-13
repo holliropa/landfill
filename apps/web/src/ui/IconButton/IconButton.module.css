@@ -8,8 +8,11 @@
     color: var(--text);
     cursor: pointer;
     transition: background-color 0.2s ease,
+    border-color 0.2s ease,
     color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    opacity 0.2s ease,
+    filter 0.2s ease;
 }
 
 .root:focus-visible {
@@ -18,9 +21,13 @@
 }
 
 .root:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
+    pointer-events: none;
+    color: var(--text-muted);
 }
+
+/* Icon */
 
 .icon {
     display: inline-flex;
@@ -37,6 +44,8 @@
     width: 1em;
     height: 1em;
 }
+
+/* Sizes */
 
 .small {
     width: 28px;
@@ -56,6 +65,8 @@
     font-size: 20px;
 }
 
+/* Shapes */
+
 .square {
     border-radius: 0;
 }
@@ -68,6 +79,8 @@
     border-radius: 9999px;
 }
 
+/* Variants */
+
 .primary {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -75,4 +88,36 @@
 
 .primary:hover:not(:disabled) {
     background: var(--surface-hover);
+}
+
+.primary:disabled {
+    background: transparent;
+    border-color: var(--border);
+}
+
+.outlined {
+    background: transparent;
+    border: 1px solid var(--border);
+}
+
+.outlined:hover:not(:disabled) {
+    background: var(--surface-hover);
+}
+
+.outlined:disabled {
+    border-color: var(--border);
+    background: transparent;
+}
+
+.ghost {
+    background: transparent;
+    border: none;
+}
+
+.ghost:hover:not(:disabled) {
+    background: var(--surface-hover);
+}
+
+.ghost:disabled {
+    background: transparent;
 }

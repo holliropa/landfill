@@ -18,13 +18,32 @@ export async function getFolder(req: Request, res: Response) {
   try {
     const folder = await prisma.folder.findUnique({
       where: { id },
+      select: {
+        id: true,
+        name: true,
+        parentFolder: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdAt: true,
+      },
     });
 
     if (!folder) {
       return res.status(404).json({ error: "Folder not found" });
     }
 
-    return res.json(folder);
+    return res.json({
+      ...folder,
+      parentFolder: folder.parentFolder
+        ? folder.parentFolder
+        : {
+            id: "root",
+            name: "root",
+          },
+    });
   } catch (error) {
     console.log("Error fetching folder: ", error);
     res.status(500).json({ error: "Failed to fetch folder" });

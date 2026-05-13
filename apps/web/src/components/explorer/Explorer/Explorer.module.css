@@ -1,0 +1,41 @@
+﻿.root {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+}
+
+.toolbar {
+    align-items: center;
+    min-height: 46px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--divider);
+    user-select: none;
+}
+
+.content {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.workspace {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.detailsPanel {
+    --details-panel-width: clamp(380px, 26vw, 500px);
+
+    display: flex;
+    width: var(--details-panel-width);
+    border-left: 1px solid var(--divider);
+}

@@ -2,6 +2,7 @@
 import { MainLayout } from "@/layouts";
 import { ExplorerPage } from "@/pages/ExplorerPage";
 import { SearchPage } from "@/pages/SearchPage";
+import { paths } from "./paths";
 
 export const router = createBrowserRouter([
   {
@@ -10,7 +11,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/folder" replace />,
+        element: <Navigate to={paths.folderPath()} replace />,
       },
       {
         path: "folder",

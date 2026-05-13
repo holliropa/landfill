@@ -1,1 +1,1 @@
-﻿export * from "./ExplorerPage.tsx";
+﻿export * from "./ExplorerPage";

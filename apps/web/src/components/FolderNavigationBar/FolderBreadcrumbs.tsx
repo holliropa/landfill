@@ -1,6 +1,7 @@
-﻿import styles from "./FolderNavigationBar.module.css";
+import styles from "./FolderNavigationBar.module.css";
 import { Fragment } from "react";
-import { HouseIcon } from "lucide-react";
+import { ChevronRightIcon, HardDriveIcon } from "lucide-react";
+import { isRootFolder } from "@/utils";
 
 export type BreadcrumbItem = {
   id: string;
@@ -19,36 +20,43 @@ export function FolderBreadcrumbs({
   onClick,
 }: FolderBreadcrumbsProps) {
   return (
-    <div className={styles.breadcrumbs}>
+    <ol className={styles.breadcrumbs} aria-label="Breadcrumb">
       {items.map((breadcrumb, index) => {
         const isCurrent = breadcrumb.id === currentFolderId;
-
-        const content =
-          breadcrumb.id === "root" ? (
-            <>
-              <HouseIcon size={20} />
-            </>
-          ) : (
-            breadcrumb.name
-          );
+        const label = isRootFolder(breadcrumb.id)
+          ? "All files"
+          : breadcrumb.name;
 
         return (
           <Fragment key={breadcrumb.id}>
-            {isCurrent ? (
-              <span className={styles.breadcrumbCurrent}>{content}</span>
-            ) : (
+            <li className={styles.breadcrumbItem}>
               <button
                 type="button"
-                className={styles.breadcrumbItem}
+                className={
+                  isCurrent ? styles.breadcrumbCurrent : styles.breadcrumbButton
+                }
+                disabled={isCurrent}
                 onClick={() => onClick(breadcrumb.id)}
+                aria-current={isCurrent ? "page" : undefined}
+                title={label}
               >
-                {content}
+                {isRootFolder(breadcrumb.id) ? (
+                  <HardDriveIcon size={20} aria-hidden="true" />
+                ) : (
+                  <span className={styles.breadcrumbLabel}>
+                    {breadcrumb.name}
+                  </span>
+                )}
               </button>
+            </li>
+            {index < items.length - 1 && (
+              <li className={styles.separator} aria-hidden="true">
+                <ChevronRightIcon size={14} />
+              </li>
             )}
-            <span className={styles.separator}>/</span>
           </Fragment>
         );
       })}
-    </div>
+    </ol>
   );
 }

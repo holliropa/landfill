@@ -206,3 +206,45 @@ export async function searchItems(query: string): Promise<SearchResult> {
 
   return response.json();
 }
+
+export type FolderResponse = {
+  id: string;
+  name: string;
+  parentFolder: {
+    id: string;
+    name: string;
+  };
+  createdAt: Date;
+};
+
+export async function getFolder(folderId: string): Promise<FolderResponse> {
+  const response = await fetch(`${API_URL}/folders/${folderId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch folder");
+  }
+
+  return response.json();
+}
+
+export type FileResponse = {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  mimeType: string;
+  folder: {
+    id: string;
+    name: string;
+  };
+  createdAt: Date;
+};
+
+export async function getFileById(fileId: string): Promise<FileResponse> {
+  const response = await fetch(`${API_URL}/files/${fileId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch file");
+  }
+
+  return response.json();
+}

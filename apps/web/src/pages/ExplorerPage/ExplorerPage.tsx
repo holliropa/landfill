@@ -42,7 +42,7 @@ export function ExplorerPage() {
         <FolderNavigationBar folderId={normalizedFolderId} />
       </div>
       <div className={styles.content}>
-        <Explorer items={items} />
+        <Explorer items={items} location={normalizedFolderId} />
       </div>
     </div>
   );
