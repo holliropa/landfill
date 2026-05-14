@@ -1,18 +1,17 @@
 import styles from "./FolderNavigationBar.module.css";
 import React, { useMemo, useRef } from "react";
 import { useCreateFolder, useFolderPath, useUploadFiles } from "@/lib/client";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeftIcon, FolderPlusIcon, UploadIcon } from "lucide-react";
+import { ArrowUpIcon, FolderPlusIcon, UploadIcon } from "lucide-react";
 import { FolderBreadcrumbs, type BreadcrumbItem } from "./FolderBreadcrumbs";
 import { IconButton } from "@/ui/IconButton";
-import { isRootFolder } from "@/utils";
+import { useFolderNavigation } from "@/hooks/useFolderNavigation";
 
 export type NavigationBarProps = {
   folderId: string;
 };
 
 export function FolderNavigationBar({ folderId }: NavigationBarProps) {
-  const navigate = useNavigate();
+  const openFolder = useFolderNavigation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { mutateAsync: createFolder } = useCreateFolder();
   const { mutateAsync: uploadFiles } = useUploadFiles();
@@ -53,13 +52,13 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
   };
 
   const handleOpenFolder = (nextFolderId: string) => {
-    navigate(`/folder${isRootFolder(nextFolderId) ? "" : `/${nextFolderId}`}`);
+    openFolder(nextFolderId);
   };
 
   const handleGoBack = () => {
-    if (!folderPath || folderPath.path.length === 1) return;
+    if (!canGoBack) return;
 
-    const parentFolder = folderPath.path[folderPath.path.length - 2];
+    const parentFolder = breadcrumbs[breadcrumbs.length - 2];
     handleOpenFolder(parentFolder.id);
   };
 
@@ -69,7 +68,7 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
         <IconButton
           shape="rounded"
           variant="ghost"
-          icon={<ArrowLeftIcon />}
+          icon={<ArrowUpIcon />}
           disabled={!canGoBack}
           onClick={handleGoBack}
           aria-label="Go to parent folder"

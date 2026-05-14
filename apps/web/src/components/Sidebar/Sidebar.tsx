@@ -7,17 +7,17 @@ import {
   SettingsIcon,
   Trash,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { SidebarItem } from "./SidebarItem";
+import { useFolderNavigation } from "@/hooks/useFolderNavigation";
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
+  const openFolder = useFolderNavigation();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
   const handleGoToAllFiles = () => {
-    navigate("/folder");
+    openFolder();
   };
 
   return (

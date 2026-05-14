@@ -6,6 +6,7 @@ import {
   getFileById,
   getFileThumbnail,
   renameFile,
+  streamRawFile,
   uploadFiles,
 } from "@/controllers/file.controller";
 import { FileService, UPLOAD_DIR } from "@/services/file.service";
@@ -25,6 +26,7 @@ router.post("/", upload.array("files"), uploadFiles);
 router.get('/:id', getFileById)
 router.delete("/:id", deleteFile);
 router.patch("/:id", renameFile);
+router.get("/:id/raw", streamRawFile);
 router.get("/:id/download", downloadFile);
 router.get("/:id/thumbnail", getFileThumbnail);
 

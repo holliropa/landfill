@@ -221,3 +221,84 @@ export async function renameFile(req: Request, res: Response) {
     res.status(500).json({ error: "Failed to rename file" });
   }
 }
+
+export async function streamRawFile(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+
+  if (!id) return res.status(400).json({ error: "File ID is required" });
+
+  try {
+    const file = await prisma.file.findUnique({
+      where: { id },
+    });
+
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    const filePath = FileService.getFilePath(file.diskName);
+
+    let stat: fs.Stats;
+    try {
+      stat = await fs.promises.stat(filePath);
+    } catch {
+      return res.status(404).json({ error: "Physical file missing" });
+    }
+
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${file.originalName}"`,
+    );
+    res.setHeader("Accept-Ranges", "bytes");
+
+    const range = req.headers.range;
+
+    if (!range) {
+      res.setHeader("Content-Length", stat.size);
+      return fs.createReadStream(filePath).pipe(res);
+    }
+
+    const match = range.match(/^bytes=(\d*)-(\d*)$/);
+
+    if (!match || (!match[1] && !match[2])) {
+      res.setHeader("Content-Range", `bytes */${stat.size}`);
+      return res.status(416).end();
+    }
+
+    let start: number;
+    let end: number;
+
+    if (!match[1]) {
+      // bytes=-500 means last 500 bytes
+      const suffixLength = Number(match[2]);
+      start = Math.max(stat.size - suffixLength, 0);
+      end = stat.size - 1;
+    } else {
+      start = Number(match[1]);
+      end = match[2] ? Number(match[2]) : stat.size - 1;
+    }
+
+    if (
+      Number.isNaN(start) ||
+      Number.isNaN(end) ||
+      start > end ||
+      start >= stat.size
+    ) {
+      res.setHeader("Content-Range", `bytes */${stat.size}`);
+      return res.status(416).end();
+    }
+
+    const safeEnd = Math.min(end, stat.size - 1);
+    const chunkSize = safeEnd - start + 1;
+
+    res.status(206);
+    res.setHeader("Content-Range", `bytes ${start}-${safeEnd}/${stat.size}`);
+    res.setHeader("Content-Length", chunkSize);
+
+    return fs.createReadStream(filePath, { start, end: safeEnd }).pipe(res);
+  } catch (error) {
+    console.error("Error fetching file: ", error);
+    return res.status(500).json({ error: "Failed to fetch file" });
+  }
+}

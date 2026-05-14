@@ -248,3 +248,7 @@ export async function getFileById(fileId: string): Promise<FileResponse> {
 
   return response.json();
 }
+
+export function getFileRawUrl(fileId: string) {
+  return `${API_URL}/files/${fileId}/raw`;
+}

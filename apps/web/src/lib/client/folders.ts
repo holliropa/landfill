@@ -20,6 +20,7 @@ export function useFolderPath(folderId: string) {
   return useQuery({
     queryKey: folderKeys.path(folderId),
     queryFn: () => getFolderPath(folderId),
+    staleTime: Infinity,
   });
 }
 

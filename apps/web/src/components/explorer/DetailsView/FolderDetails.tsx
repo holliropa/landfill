@@ -5,8 +5,7 @@ import { useFolder } from "@/lib/client";
 import { DetailsRow } from "./DetailsRow";
 import { format } from "date-fns";
 import { Button } from "@/ui/Button";
-import { useNavigate } from "react-router-dom";
-import { paths } from "@/router";
+import { useFolderNavigation } from "@/hooks/useFolderNavigation";
 
 export function FolderDetails({
   id,
@@ -15,13 +14,13 @@ export function FolderDetails({
   id: string;
   onClose: () => void;
 }) {
-  const navigate = useNavigate();
+  const openFolder = useFolderNavigation();
   const { data: folder, isLoading, error } = useFolder(id);
 
   const handleOpenFolder = () => {
     if (!folder) return;
 
-    navigate(paths.folderPath(folder.parentFolder.id));
+    openFolder(folder.parentFolder);
   };
 
   if (isLoading) {

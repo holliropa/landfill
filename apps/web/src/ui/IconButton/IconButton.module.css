@@ -22,8 +22,7 @@
 
 .root:disabled {
     opacity: 0.45;
-    cursor: not-allowed;
-    pointer-events: none;
+    cursor: default;
     color: var(--text-muted);
 }
 

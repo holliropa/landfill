@@ -7,8 +7,7 @@ import { formatSize } from "@/utils";
 import { format } from "date-fns";
 import { FolderIcon } from "lucide-react";
 import { Button } from "@/ui/Button";
-import { useNavigate } from "react-router-dom";
-import { paths } from "@/router";
+import { useFolderNavigation } from "@/hooks/useFolderNavigation";
 
 export function FileDetails({
   id,
@@ -17,13 +16,13 @@ export function FileDetails({
   id: string;
   onClose: () => void;
 }) {
-  const navigate = useNavigate();
+  const openFolder = useFolderNavigation();
   const { data: fileData, isLoading, error } = useFile(id);
 
   const handleOpenFolder = () => {
     if (!fileData) return;
 
-    navigate(paths.folderPath(fileData.folder.id));
+    openFolder(fileData.folder);
   };
 
   if (isLoading) {
