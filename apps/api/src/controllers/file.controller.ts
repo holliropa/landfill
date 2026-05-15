@@ -124,8 +124,6 @@ export async function getFileThumbnail(req: Request, res: Response) {
       res.setHeader("Content-Type", "image/jpeg");
       res.setHeader("Cache-Control", "public, max-age=604800");
 
-      console.log("Generating thumbnail for: ", filePath);
-
       return sharp(filePath)
         .resize({ width: 300, withoutEnlargement: true })
         .toFormat("jpeg")
