@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { IconButton } from "@/ui/IconButton";
 import { SpinnerIcon } from "@/ui/SpinnerIcon";
+import { toast } from "sonner";
+import { triggerDownload } from "@/utils";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,7 +38,6 @@ export function ManipulationBar({
   onShowDetails,
 }: ManipulationBarProps) {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const { mutateAsync: renameFile } = useRenameFile();
   const { mutateAsync: renameFolder } = useRenameFolder();
 
@@ -51,8 +52,8 @@ export function ManipulationBar({
 
     if (!confirmDelete) return;
 
-    try {
-      await Promise.all(
+    toast.promise(
+      Promise.all(
         selectedItems.map(async (item) => {
           if (item.kind === "file") {
             await deleteFile(item.id);
@@ -60,10 +61,13 @@ export function ManipulationBar({
             await deleteFolder(item.id);
           }
         }),
-      );
-    } catch (error) {
-      console.error("Failed to delete", error);
-    }
+      ),
+      {
+        success: `Deleted ${selectedItems.length} items`,
+        error: "Failed to delete",
+        duration: 1500,
+      },
+    );
   };
 
   const handleRename = async () => {
@@ -74,66 +78,72 @@ export function ManipulationBar({
     if (!newName?.trim()) return;
 
     if (selectedItems[0].kind === "file") {
-      await renameFile({ fileId: selectedItems[0].id, newName });
+      toast.promise(renameFile({ fileId: selectedItems[0].id, newName }), {
+        success: "Renamed successfully",
+        error: "Failed to rename",
+        duration: 1500,
+      });
     } else if (selectedItems[0].kind === "folder") {
-      await renameFolder({ folderId: selectedItems[0].id, newName });
+      toast.promise(renameFolder({ folderId: selectedItems[0].id, newName }), {
+        success: "Renamed successfully",
+        error: "Failed to rename",
+        duration: 1500,
+      });
     }
   };
 
   const handleDownload = async () => {
     if (selectedItems.length === 0 || isDownloading) return;
 
-    try {
-      setIsDownloading(true);
+    setIsDownloading(true);
 
-      if (selectedItems.length === 1 && selectedItems[0].kind === "file") {
-        window.open(getFileDownloadUrl(selectedItems[0].id), "_blank");
-        return;
-      }
-
-      setDownloadStatus("Preparing archive...");
-
-      const result = await createDownload(
-        selectedItems.map((item) => ({
-          kind: item.kind,
-          id: item.id,
-        })),
-      );
-
-      while (true) {
-        const job = await getDownloadJob(result.jobId);
-
-        if (job.status === "ready") {
-          window.open(getArchiveDownloadUrl(result.jobId), "_blank");
-          break;
-        }
-
-        if (job.status === "failed") {
-          throw new Error(job.errorMessage || "Archive creation failed");
-        }
-
-        if (job.status === "expired") {
-          throw new Error("Archive expired");
-        }
-
-        setDownloadStatus(
-          job.progress > 0
-            ? `Preparing archive... ${job.progress}%`
-            : "Preparing archive...",
-        );
-
-        await sleep(1000);
-      }
-
-      setDownloadStatus(null);
-    } catch (error) {
-      console.error(error);
-      setDownloadStatus(
-        error instanceof Error ? error.message : "Download failed",
-      );
-    } finally {
-      setIsDownloading(false);
+    if (selectedItems.length === 1 && selectedItems[0].kind === "file") {
+      triggerDownload(getFileDownloadUrl(selectedItems[0].id));
+      toast.success("Download started");
+      return;
     }
+
+    const toastId = toast.loading("Preparing download...");
+
+    const result = await createDownload(
+      selectedItems.map((item) => ({
+        kind: item.kind,
+        id: item.id,
+      })),
+    );
+
+    while (true) {
+      const job = await getDownloadJob(result.jobId);
+
+      if (job.status === "ready") {
+        toast.success("Download ready", {
+          id: toastId,
+        });
+        triggerDownload(getArchiveDownloadUrl(result.jobId));
+        break;
+      }
+
+      if (job.status === "failed") {
+        toast.error("Download failed", {
+          id: toastId,
+        });
+      }
+
+      if (job.status === "expired") {
+        toast.error("Download expired", {
+          id: toastId,
+        });
+      }
+
+      toast.loading(
+        `Preparing download... ${job.progress > 0 ? job.progress : ""}`,
+        { id: toastId },
+      );
+
+      await sleep(1000);
+    }
+
+    setIsDownloading(false);
   };
 
   return (
@@ -157,7 +167,6 @@ export function ManipulationBar({
           <span>{selectedItems.length} selected</span>
         </>
       )}
-      {downloadStatus ? <span>{downloadStatus}</span> : null}
       <div
         style={{
           display: "flex",

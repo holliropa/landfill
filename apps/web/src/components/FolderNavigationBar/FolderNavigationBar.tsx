@@ -5,6 +5,7 @@ import { ArrowUpIcon, FolderPlusIcon, UploadIcon } from "lucide-react";
 import { FolderBreadcrumbs, type BreadcrumbItem } from "./FolderBreadcrumbs";
 import { IconButton } from "@/ui/IconButton";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
+import { toast } from "sonner";
 
 export type NavigationBarProps = {
   folderId: string;
@@ -30,10 +31,18 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
 
     if (!trimmedName) return;
 
-    await createFolder({
-      name: trimmedName,
-      parentFolderId: folderId,
-    });
+    toast.promise(
+      createFolder({
+        name: trimmedName,
+        parentFolderId: folderId,
+      }),
+      {
+        loading: `Creating folder "${trimmedName}"...`,
+        success: `Folder "${trimmedName}" created`,
+        error: "Failed to create folder",
+        duration: 1500,
+      },
+    );
   };
 
   const handleFileInputChange = async (
@@ -42,10 +51,21 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
     const selectedFiles = Array.from(event.target.files ?? []);
 
     if (selectedFiles.length > 0) {
-      await uploadFiles({
-        files: selectedFiles,
-        parentFolderId: folderId,
-      });
+      const fileCount = selectedFiles.length;
+      const fileLabel = fileCount === 1 ? "file" : "files";
+
+      toast.promise(
+        uploadFiles({
+          files: selectedFiles,
+          parentFolderId: folderId,
+        }),
+        {
+          loading: `Uploading ${fileCount} ${fileLabel}...`,
+          success: `Uploaded ${fileCount} ${fileLabel}`,
+          error: "Failed to upload",
+          duration: 1500,
+        },
+      );
     }
 
     event.target.value = "";

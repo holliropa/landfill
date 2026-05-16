@@ -175,6 +175,13 @@ export function FileViewer({
             src={getFileRawUrl(fileData.id)}
           />
         )}
+        {fileData?.mimeType.startsWith("application/pdf") && (
+          <iframe
+            className={styles.media}
+            src={getFileRawUrl(fileData.id)}
+            title={fileData.name}
+          />
+        )}
       </div>
     </div>,
     document.body,
