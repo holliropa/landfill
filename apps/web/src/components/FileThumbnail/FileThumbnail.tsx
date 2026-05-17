@@ -1,6 +1,7 @@
 ﻿import styles from "./FileThumbnail.module.css";
 import { FileIcon } from "lucide-react";
 import { useState } from "react";
+import { getFileThumbnailUrl } from "@/lib/client";
 
 interface FileThumbnailProps {
   fileId: string;
@@ -12,7 +13,7 @@ export function FileThumbnail({ fileId, alt }: FileThumbnailProps) {
 
   const hasError = failedFileId === fileId;
 
-  const thumbnailUrl = `http://localhost:3000/api/files/${fileId}/thumbnail`;
+  const thumbnailUrl = getFileThumbnailUrl(fileId);
 
   return (
     <div className={styles.container}>

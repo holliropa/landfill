@@ -1,7 +1,9 @@
 ﻿import type { FileItem, FolderItem } from "@/types";
 import type { StorageItem } from "./types";
 
-const API_URL = "http://localhost:3000/api";
+const DEFAULT_API_ORIGIN = `${window.location.protocol}//${window.location.hostname}:3000`;
+
+export const API_URL = `${import.meta.env.VITE_API_URL ?? DEFAULT_API_ORIGIN}/api`;
 
 export async function createFolder(
   name: string,
@@ -251,4 +253,8 @@ export async function getFileById(fileId: string): Promise<FileResponse> {
 
 export function getFileRawUrl(fileId: string) {
   return `${API_URL}/files/${fileId}/raw`;
+}
+
+export function getFileThumbnailUrl(fileId: string) {
+  return `${API_URL}/files/${fileId}/thumbnail`;
 }
