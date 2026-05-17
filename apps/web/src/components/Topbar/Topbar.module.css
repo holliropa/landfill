@@ -11,6 +11,7 @@
     background: color-mix(in srgb, var(--surface) 80%, transparent);
     border: 1px solid var(--border-strong);
     border-radius: 6px;
+    align-items: center;
 }
 
 .searchContainer:focus-within {

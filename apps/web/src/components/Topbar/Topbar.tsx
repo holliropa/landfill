@@ -1,10 +1,13 @@
 ﻿import styles from "./Topbar.module.css";
-import { SearchIcon } from "lucide-react";
+import { MoonIcon, SearchIcon, SunIcon } from "lucide-react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type { SyntheticEvent } from "react";
+import { IconButton } from "@/ui/IconButton";
+import { useTheme } from "@/lib/theme";
 
 export function Topbar() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -43,6 +46,14 @@ export function Topbar() {
           defaultValue={inputDefaultValue}
         />
       </form>
+      <IconButton
+        icon={theme === "light" ? <MoonIcon /> : <SunIcon />}
+        variant="ghost"
+        onClick={toggleTheme}
+        style={{
+          marginLeft: "auto",
+        }}
+      />
     </header>
   );
 }
