@@ -29,7 +29,7 @@ export type KeyboardShortcutKey =
   | "F12"
   | (string & {});
 
-type ShortcurOptions = {
+type ShortcutOptions = {
   enabled?: boolean;
   ignoreEditableTargets?: boolean;
   preventDefault?: boolean;
@@ -61,7 +61,7 @@ export function useKeyboardShortcut(
     metaKey,
     shiftKey,
     altKey,
-  }: ShortcurOptions = {},
+  }: ShortcutOptions = {},
 ) {
   const handlerRef = useRef(handler);
 
