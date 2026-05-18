@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
+import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut.ts";
 
 const FILE_NAME_DISPLAY_LIMIT = 38;
 
@@ -87,6 +88,14 @@ export function FileViewer({
   onClose,
   navigation,
 }: FileViewerProps) {
+  useKeyboardShortcut("ArrowRight", () => navigation?.onNext(), {
+    enabled: navigation !== undefined,
+  });
+  useKeyboardShortcut("ArrowLeft", () => navigation?.onPrevious(), {
+    enabled: navigation !== undefined,
+  });
+  useKeyboardShortcut("Escape", onClose);
+
   const { data: fileData, isLoading, error } = useFile(fileId);
   const fileName = fileData?.name ?? name ?? "Loading...";
   const displayedFileName = formatFileName(fileName);
