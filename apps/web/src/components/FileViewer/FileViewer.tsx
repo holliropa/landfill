@@ -1,5 +1,6 @@
 ﻿import styles from "./FileViewer.module.css";
-import { getFileRawUrl, useFile } from "@/lib/client";
+import { FileViewerContent } from "./FileViewerContent";
+import { useFile } from "@/lib/client";
 import { IconButton } from "@/ui/IconButton";
 import { SpinnerIcon } from "@/ui/SpinnerIcon";
 import {
@@ -161,36 +162,7 @@ export function FileViewer({
         {!isLoading && !error && !fileData && (
           <div className={styles.status}>File not found</div>
         )}
-        {fileData?.mimeType.startsWith("image/") && (
-          <img
-            className={styles.media}
-            src={getFileRawUrl(fileData.id)}
-            alt={fileData.name}
-          />
-        )}
-        {fileData?.mimeType.startsWith("video/") && (
-          <video
-            className={styles.media}
-            controls
-            src={getFileRawUrl(fileData.id)}
-          />
-        )}
-        {fileData?.mimeType.startsWith("application/pdf") && (
-          <iframe
-            className={styles.media}
-            src={getFileRawUrl(fileData.id)}
-            title={fileData.name}
-          />
-        )}
-        {fileData?.mimeType.startsWith("audio/") && (
-          <audio
-            // key={fileData.id}
-            src={getFileRawUrl(fileData.id)}
-            className={styles.audioMedia}
-            controls
-            autoPlay
-          />
-        )}
+        {fileData && <FileViewerContent file={fileData} />}
       </div>
     </div>,
     document.body,

@@ -100,6 +100,25 @@
     color: var(--text);
 }
 
+.unsupportedStatus {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: min(100%, 420px);
+    color: var(--text);
+    text-align: center;
+}
+
+.unsupportedStatus strong {
+    font-size: 18px;
+}
+
+.unsupportedMeta {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 .loadingStatus {
     display: flex;
     align-items: center;
