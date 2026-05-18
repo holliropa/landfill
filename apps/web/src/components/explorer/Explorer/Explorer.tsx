@@ -10,6 +10,9 @@ import {
 import { isRootFolder } from "@/utils";
 import { FileViewer } from "@/components/FileViewer";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
+import { useExplorerKeyboardNavigation } from "./hooks/useExplorerKeyboardNavigation";
+import { useExplorerSelection } from "./hooks/useExplorerSelection";
+import { useExplorerFileViewer } from "./hooks/useExplorerFileViewer";
 
 type ExplorerProps = {
   items: ExplorerItem[];
@@ -18,61 +21,36 @@ type ExplorerProps = {
 
 export function Explorer({ items, location }: ExplorerProps) {
   const openFolder = useFolderNavigation();
-  const [openedId, setOpenedId] = useState<string | null>(null);
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const selection = useExplorerSelection({ items });
+  const fileViewer = useExplorerFileViewer({ items });
   const [showDetails, setShowDetails] = useState(false);
-  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
-    null,
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(
+    items.length > 0 ? 0 : null,
   );
+  const [isExplorerKeyboardActive, setIsExplorerKeyboardActive] =
+    useState(false);
 
-  const files = useMemo(
-    () => items.filter((item) => item.kind === "file"),
-    [items],
-  );
-
-  const openedFileIndex = useMemo(
-    () => files.findIndex((item) => item.id === openedId),
-    [openedId, files],
-  );
-
-  const openedFile = openedFileIndex >= 0 ? files[openedFileIndex] : undefined;
-  const hasPreviousFile = openedFileIndex > 0;
-  const hasNextFile =
-    openedFileIndex >= 0 && openedFileIndex < files.length - 1;
-
-  const openPreviousFile = () => {
-    if (hasPreviousFile) {
-      setOpenedId(files[openedFileIndex - 1].id);
-    }
-  };
-
-  const openNextFile = () => {
-    if (hasNextFile) {
-      setOpenedId(files[openedFileIndex + 1].id);
-    }
-  };
-
-  const selectedItems = useMemo(
-    () => items.filter((item) => selectedKeys.has(item.key)),
-    [items, selectedKeys],
-  );
+  const clampedFocusedIndex =
+    focusedIndex === null || items.length === 0
+      ? null
+      : Math.min(focusedIndex, items.length - 1);
 
   const detailsTarget = useMemo<DetailsTarget>(() => {
-    if (selectedItems.length === 0) {
+    if (selection.selectedItems.length === 0) {
       if (location && !isRootFolder(location)) {
         return { type: "folder", id: location };
       }
 
       return { type: "none" };
     }
-    if (selectedItems.length === 1) {
-      const item = selectedItems[0];
+    if (selection.selectedItems.length === 1) {
+      const item = selection.selectedItems[0];
       return item.kind === "folder"
         ? { type: "folder", id: item.id }
         : { type: "file", id: item.id };
     }
-    return { type: "selection", items: selectedItems };
-  }, [location, selectedItems]);
+    return { type: "selection", items: selection.selectedItems };
+  }, [location, selection.selectedItems]);
 
   const handleOpenItem = (index: number) => {
     const item = items[index];
@@ -80,71 +58,45 @@ export function Explorer({ items, location }: ExplorerProps) {
 
     if (item.kind === "folder") {
       openFolder(item);
-      resetSelection();
-    } else if (item.kind === "file") {
-      setOpenedId(item.id);
+      selection.resetSelection();
+      return;
     }
-  };
 
-  const resetSelection = () => {
-    setSelectedKeys(new Set());
-    setLastSelectedIndex(null);
-  };
-  const handleSelectRange = (from: number, to: number) => {
-    const newSelected = new Set<string>();
-    for (let i = from; i <= to; i++) {
-      newSelected.add(items[i].key);
-    }
-    setSelectedKeys(newSelected);
-    if (from === to) setLastSelectedIndex(from);
-  };
-
-  const handleToggleSingle = (index: number, deselectRest: boolean) => {
-    setSelectedKeys((prev) => {
-      const newSelected = new Set(prev);
-      const item = items[index];
-      if (!item) return prev;
-
-      if (deselectRest) {
-        newSelected.clear();
-        newSelected.add(item.key);
-      } else if (newSelected.has(item.key)) {
-        newSelected.delete(item.key);
-      } else {
-        newSelected.add(item.key);
-      }
-      return newSelected;
-    });
-
-    setLastSelectedIndex(index);
+    fileViewer.openFile(item.id);
   };
 
   const handleClickItem = (index: number, event: React.MouseEvent) => {
     const item = items[index];
     if (!item) return;
 
-    if (event.shiftKey) {
-      const startIndex = lastSelectedIndex ?? index;
-      const from = Math.min(startIndex, index);
-      const to = Math.max(startIndex, index);
-      handleSelectRange(from, to);
-      return;
-    }
-
-    handleToggleSingle(index, !event.ctrlKey && !event.metaKey);
+    setFocusedIndex(index);
+    selection.handleClickItem(index, event);
   };
 
   const toggleDetails = () => {
     setShowDetails((prevState) => !prevState);
   };
 
+  useExplorerKeyboardNavigation({
+    items,
+    focusedIndex: clampedFocusedIndex,
+    selectedKeys: selection.selectedKeys,
+    lastSelectedIndex: selection.lastSelectedIndex,
+    enabled: !fileViewer.isOpen && isExplorerKeyboardActive,
+    setFocusedIndex,
+    setSelectedKeys: selection.setSelectedKeys,
+    setLastSelectedIndex: selection.setLastSelectedIndex,
+    resetSelection: selection.resetSelection,
+    openItem: handleOpenItem,
+  });
+
   return (
     <>
       <div className={styles.root}>
         <div className={styles.toolbar}>
           <ManipulationBar
-            selectedItems={selectedItems}
-            onDeselectAll={resetSelection}
+            selectedItems={selection.selectedItems}
+            onDeselectAll={selection.resetSelection}
             onShowDetails={toggleDetails}
           />
         </div>
@@ -152,7 +104,10 @@ export function Explorer({ items, location }: ExplorerProps) {
           <div className={styles.content}>
             <ExplorerList
               items={items}
-              selectedKeys={selectedKeys}
+              selectedKeys={selection.selectedKeys}
+              focusedIndex={clampedFocusedIndex}
+              onFocusedIndex={setFocusedIndex}
+              onKeyboardActiveChange={setIsExplorerKeyboardActive}
               onItemClick={handleClickItem}
               onItemOpen={handleOpenItem}
             />
@@ -167,16 +122,16 @@ export function Explorer({ items, location }: ExplorerProps) {
           )}
         </div>
       </div>
-      {openedId !== null && (
+      {fileViewer.openedId !== null && (
         <FileViewer
-          fileId={openedId}
-          name={openedFile?.name}
-          onClose={() => setOpenedId(null)}
+          fileId={fileViewer.openedId}
+          name={fileViewer.openedFile?.name}
+          onClose={fileViewer.closeFile}
           navigation={{
-            hasPrevious: hasPreviousFile,
-            hasNext: hasNextFile,
-            onPrevious: openPreviousFile,
-            onNext: openNextFile,
+            hasNext: fileViewer.hasNextFile,
+            hasPrevious: fileViewer.hasPreviousFile,
+            onNext: fileViewer.openNextFile,
+            onPrevious: fileViewer.openPreviousFile,
           }}
         />
       )}

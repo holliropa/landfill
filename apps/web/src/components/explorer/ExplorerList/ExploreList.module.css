@@ -136,3 +136,8 @@
     font-size: 14px;
     text-align: center;
 }
+
+.row[data-focused] {
+    outline: 2px solid var(--border-subtle);
+    outline-offset: -2px;
+}
