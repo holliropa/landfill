@@ -182,6 +182,15 @@ export function FileViewer({
             title={fileData.name}
           />
         )}
+        {fileData?.mimeType.startsWith("audio/") && (
+          <audio
+            // key={fileData.id}
+            src={getFileRawUrl(fileData.id)}
+            className={styles.audioMedia}
+            controls
+            autoPlay
+          />
+        )}
       </div>
     </div>,
     document.body,
