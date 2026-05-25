@@ -53,10 +53,12 @@ export function Explorer({ items, location }: ExplorerProps) {
   }, [location, selection.selectedItems]);
 
   const handleOpenItem = (index: number) => {
+    console.log(`Opening item at index: ${index}`);
     const item = items[index];
     if (!item) return;
 
     if (item.kind === "folder") {
+      console.log(`Opening folder: ${item.name}`);
       openFolder(item);
       selection.resetSelection();
       return;

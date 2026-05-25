@@ -1,0 +1,37 @@
+{
+  "name": "@landfill/db",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "prebuild": "node scripts/bundle-migrations.js",
+    "build": "tsc",
+    "check-types": "tsc --noEmit",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.1.2",
+    "drizzle-orm": "1.0.0-beta.22"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.0.0",
+    "drizzle-kit": "1.0.0-beta.22",
+    "typescript": "^5.5.0"
+  }
+}

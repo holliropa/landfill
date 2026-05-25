@@ -1,33 +1,31 @@
 ﻿import { Router } from "express";
 import multer from "multer";
 import {
-  deleteFile,
-  downloadFile,
-  getFileById,
-  getFileThumbnail,
-  renameFile,
-  streamRawFile,
-  uploadFiles,
+  deleteFileHandler,
+  downloadFileHandler,
+  getFileByIdHandler,
+  getFileThumbnailHandler,
+  renameFileHandler,
+  streamRawFileHandler,
+  uploadFilesHandler,
 } from "@/controllers/file.controller";
-import { FileService, UPLOAD_DIR } from "@/services/file.service";
+import config from "@/config";
 
 const router = Router();
 
-FileService.ensureUploadDir();
-
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  destination: (req, file, cb) => cb(null, config.storage.uploadsDir),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 
 const upload = multer({ storage });
 
-router.post("/", upload.array("files"), uploadFiles);
-router.get('/:id', getFileById)
-router.delete("/:id", deleteFile);
-router.patch("/:id", renameFile);
-router.get("/:id/raw", streamRawFile);
-router.get("/:id/download", downloadFile);
-router.get("/:id/thumbnail", getFileThumbnail);
+router.post("/", upload.array("files"), uploadFilesHandler);
+router.get("/:id", getFileByIdHandler);
+router.delete("/:id", deleteFileHandler);
+router.patch("/:id", renameFileHandler);
+router.get("/:id/raw", streamRawFileHandler);
+router.get("/:id/download", downloadFileHandler);
+router.get("/:id/thumbnail", getFileThumbnailHandler);
 
 export default router;

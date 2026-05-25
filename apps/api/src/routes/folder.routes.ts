@@ -1,20 +1,20 @@
 ﻿import { Router } from "express";
 import {
-  createFolder,
-  deleteFolder,
-  getFolder,
-  getFolderContent,
-  getFolderPath,
-  renameFolder,
+  createFolderHandler,
+  deleteFolderHandler,
+  getFolderHandler,
+  getFolderContentHandler,
+  getFolderPathHandler,
+  renameFolderHandler,
 } from "@/controllers/folder.controller";
 
 const router = Router();
 
-router.post("/", createFolder);
-router.get("/:id/content", getFolderContent);
-router.get("/:id", getFolder);
-router.patch("/:id", renameFolder);
-router.delete("/:id", deleteFolder);
-router.get("/:id/path", getFolderPath);
+router.post("/", createFolderHandler);
+router.get("/:id/content", getFolderContentHandler);
+router.get("/:id", getFolderHandler);
+router.patch("/:id", renameFolderHandler);
+router.delete("/:id", deleteFolderHandler);
+router.get("/:id/path", getFolderPathHandler);
 
 export default router;

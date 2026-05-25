@@ -64,6 +64,7 @@
 .body {
     width: max-content;
     min-width: 100%;
+    outline: none;
 }
 
 .row {

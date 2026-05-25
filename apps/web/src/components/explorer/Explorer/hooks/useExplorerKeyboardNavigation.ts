@@ -54,7 +54,7 @@ export function useExplorerKeyboardNavigation({
   openItem,
 }: ExplorerKeyboardNavigationParams) {
   const hasItems = items.length > 0;
-  const singleItem = items.length === 1;
+  const singleItem = selectedKeys.size == 1;
 
   const moveFocus = (offset: number, extendSelection: boolean) => {
     const activeIndex = getActiveIndex(focusedIndex, items.length);
@@ -67,6 +67,8 @@ export function useExplorerKeyboardNavigation({
       const rangeStart = lastSelectedIndex ?? activeIndex;
       setSelectedKeys(selectRange(items, rangeStart, nextIndex));
       return;
+    } else {
+      setSelectedKeys(new Set([items[nextIndex].key]));
     }
 
     setLastSelectedIndex(nextIndex);
@@ -137,6 +139,7 @@ export function useExplorerKeyboardNavigation({
     "Enter",
     () => {
       const activeIndex = getActiveIndex(focusedIndex, items.length);
+      console.log(`Opening item at index: ${activeIndex}`);
       if (activeIndex === null) return;
 
       openItem(activeIndex);

@@ -1,14 +1,14 @@
 ﻿import { Router } from "express";
 import {
-  createDownloadJob,
-  downloadArchiveFile,
-  getDownloadJob,
+  createDownloadJobHandler,
+  downloadArchiveFileHandler,
+  getDownloadJobHandler,
 } from "@/controllers/download.controller";
 
 const router = Router();
 
-router.post("/", createDownloadJob);
-router.get("/:id", getDownloadJob);
-router.get("/:id/file", downloadArchiveFile);
+router.post("/", createDownloadJobHandler);
+router.get("/:id", getDownloadJobHandler);
+router.get("/:id/file", downloadArchiveFileHandler);
 
 export default router;

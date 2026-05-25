@@ -1,5 +1,5 @@
 ﻿import { Request, Response } from "express";
-import { prisma } from "@/lib/prisma";
+import { findFilesByName, findFoldersByName } from "@/services";
 
 type StorageItem = {
   id: string;
@@ -14,47 +14,17 @@ type StorageItem = {
   };
 };
 
-export async function searchItems(req: Request, res: Response) {
+export async function searchItemsHandler(req: Request, res: Response) {
   const { query } = req.query as { query?: string };
 
   if (!query) return res.status(200).json([]);
 
   try {
-    const matchedFiles = await prisma.file.findMany({
-      where: {
-        originalName: { contains: query ?? "" },
-      },
-      select: {
-        id: true,
-        originalName: true,
-        createdAt: true,
-        size: true,
-        mimeType: true,
-        folder: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const filesResult = await findFilesByName(query);
+    const matchedFiles = filesResult.success ? filesResult.data : [];
 
-    const matchedFolders = await prisma.folder.findMany({
-      where: {
-        name: { contains: query ?? "" },
-      },
-      select: {
-        id: true,
-        name: true,
-        createdAt: true,
-        parentFolder: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const foldersResult = await findFoldersByName(query);
+    const matchedFolders = foldersResult.success ? foldersResult.data : [];
 
     const items: StorageItem[] = [
       ...matchedFolders.map((folder) => ({

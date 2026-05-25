@@ -11,8 +11,7 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "^7.4.2",
-    "@prisma/client": "^7.4.2",
+    "@landfill/db": "*",
     "archiver": "^7.0.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -23,12 +22,10 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.5",
     "@types/archiver": "^7.0.0",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.3.3",
-    "prisma": "^7.4.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
