@@ -1,15 +1,12 @@
-﻿import type { FileItem, FolderItem } from "@/types";
+import type { FileItem, FolderItem } from "@/types";
 import type { StorageItem } from "./types";
-
-const DEFAULT_API_ORIGIN = `${window.location.protocol}//${window.location.hostname}:3000`;
-
-export const API_URL = `${import.meta.env.VITE_API_URL ?? DEFAULT_API_ORIGIN}/api`;
+import config from "@/config";
 
 export async function createFolder(
   name: string,
   parentFolderId: string,
 ): Promise<FolderItem> {
-  const response = await fetch(`${API_URL}/folders`, {
+  const response = await fetch(`${config.api.url}/folders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -32,7 +29,7 @@ export type FolderContentResponse = {
 export async function getFolderContent(
   folderId: string,
 ): Promise<FolderContentResponse> {
-  const response = await fetch(`${API_URL}/folders/${folderId}/content`);
+  const response = await fetch(`${config.api.url}/folders/${folderId}/content`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch folder children");
@@ -49,7 +46,7 @@ export async function uploadFiles(
   files.forEach((file) => formData.append("files", file));
   formData.append("folder", folderId);
 
-  const response = await fetch(`${API_URL}/files`, {
+  const response = await fetch(`${config.api.url}/files`, {
     method: "POST",
     body: formData,
   });
@@ -62,11 +59,11 @@ export async function uploadFiles(
 }
 
 export function getFileDownloadUrl(fileId: string) {
-  return `${API_URL}/files/${fileId}/download`;
+  return `${config.api.url}/files/${fileId}/download`;
 }
 
 export function getArchiveDownloadUrl(jobId: string) {
-  return `${API_URL}/downloads/${jobId}/file`;
+  return `${config.api.url}/downloads/${jobId}/file`;
 }
 
 export type FolderPathResponse = {
@@ -79,7 +76,7 @@ export type FolderPathResponse = {
 export async function getFolderPath(
   folderId: string,
 ): Promise<FolderPathResponse> {
-  const response = await fetch(`${API_URL}/folders/${folderId}/path`);
+  const response = await fetch(`${config.api.url}/folders/${folderId}/path`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch folder path");
@@ -102,7 +99,7 @@ export type CreateDownloadResponse = {
 export async function createDownload(
   items: DownloadItem[],
 ): Promise<CreateDownloadResponse> {
-  const response = await fetch(`${API_URL}/downloads`, {
+  const response = await fetch(`${config.api.url}/downloads`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -128,7 +125,7 @@ export type DownloadJobResponse = {
 export async function getDownloadJob(
   jobId: string,
 ): Promise<DownloadJobResponse> {
-  const response = await fetch(`${API_URL}/downloads/${jobId}`);
+  const response = await fetch(`${config.api.url}/downloads/${jobId}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch download job");
@@ -141,7 +138,7 @@ export async function renameFile(
   fileId: string,
   newName: string,
 ): Promise<FileItem> {
-  const response = await fetch(`${API_URL}/files/${fileId}`, {
+  const response = await fetch(`${config.api.url}/files/${fileId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -160,7 +157,7 @@ export async function renameFolder(
   folderId: string,
   newName: string,
 ): Promise<FolderItem> {
-  const response = await fetch(`${API_URL}/folders/${folderId}`, {
+  const response = await fetch(`${config.api.url}/folders/${folderId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -176,7 +173,7 @@ export async function renameFolder(
 }
 
 export async function deleteFile(fileId: string): Promise<void> {
-  const response = await fetch(`${API_URL}/files/${fileId}`, {
+  const response = await fetch(`${config.api.url}/files/${fileId}`, {
     method: "DELETE",
   });
 
@@ -186,7 +183,7 @@ export async function deleteFile(fileId: string): Promise<void> {
 }
 
 export async function deleteFolder(folderId: string): Promise<void> {
-  const response = await fetch(`${API_URL}/folders/${folderId}`, {
+  const response = await fetch(`${config.api.url}/folders/${folderId}`, {
     method: "DELETE",
   });
 
@@ -200,7 +197,9 @@ export type SearchResult = {
 };
 
 export async function searchItems(query: string): Promise<SearchResult> {
-  const response = await fetch(`${API_URL}/storage/search?query=${query}`);
+  const response = await fetch(
+    `${config.api.url}/storage/search?query=${query}`,
+  );
 
   if (!response.ok) {
     throw new Error("Failed to search items");
@@ -220,7 +219,7 @@ export type FolderResponse = {
 };
 
 export async function getFolder(folderId: string): Promise<FolderResponse> {
-  const response = await fetch(`${API_URL}/folders/${folderId}`);
+  const response = await fetch(`${config.api.url}/folders/${folderId}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch folder");
@@ -242,7 +241,7 @@ export type FileResponse = {
 };
 
 export async function getFileById(fileId: string): Promise<FileResponse> {
-  const response = await fetch(`${API_URL}/files/${fileId}`);
+  const response = await fetch(`${config.api.url}/files/${fileId}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch file");
@@ -252,9 +251,9 @@ export async function getFileById(fileId: string): Promise<FileResponse> {
 }
 
 export function getFileRawUrl(fileId: string) {
-  return `${API_URL}/files/${fileId}/raw`;
+  return `${config.api.url}/files/${fileId}/raw`;
 }
 
 export function getFileThumbnailUrl(fileId: string) {
-  return `${API_URL}/files/${fileId}/thumbnail`;
+  return `${config.api.url}/files/${fileId}/thumbnail`;
 }

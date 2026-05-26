@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import cors from "cors";
 import fileRoutes from "@/routes/file.routes";
 import folderRoutes from "@/routes/folder.routes";

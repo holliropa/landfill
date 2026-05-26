@@ -21,9 +21,9 @@ apps/api  -> Express API
 The API listens on `http://localhost:3000` and exposes routes under `/api`.
 The web app is served by Vite, usually on `http://localhost:5173`.
 
-In development, the web client defaults to calling the API on the same hostname
-at port `3000`, which makes it usable from other devices on the local network
-when the development servers are bound to the LAN.
+In development, the web client calls same-origin `/api` routes. With
+`API_PROXY_TARGET` configured, Vite proxies those requests to the Express API on
+`http://localhost:3000`.
 
 ## Current Features
 
@@ -111,6 +111,17 @@ PORT="3000"
 The API creates the configured data directories on startup and initializes the
 SQLite database automatically.
 
+Create `apps/web/.env` for web and Vite development-server configuration:
+
+```sh
+API_PROXY_TARGET="http://localhost:3000"
+```
+
+The React app always calls the API through the same-origin `/api` path.
+`API_PROXY_TARGET` is optional and only used by the Vite development server. If
+it is set, Vite proxies `/api` requests to the API target. If it is not set, the
+web development server does not proxy API requests.
+
 ## Development
 
 Run both apps through Turbo:
@@ -131,10 +142,22 @@ The API is available at:
 http://localhost:3000/api
 ```
 
+When `API_PROXY_TARGET` is set, the Vite development server proxies web requests
+from `/api` to the API server. This lets frontend code use the same `/api` paths
+that a production reverse proxy can expose later.
+
+To run the web app through the same-origin dev proxy against an API on another
+port or host, change `API_PROXY_TARGET` in `apps/web/.env` or set it when
+starting the web workspace:
+
+```sh
+API_PROXY_TARGET="http://localhost:3001" npm run dev --workspace @landfill/web
+```
+
 ## Scripts
 
 - `npm run dev`: start all workspace development servers.
-- `npm run build`: build workspaces that currently define a build task.
+- `npm run build`: build database, web, and API workspace outputs.
 - `npm run lint`: run workspace lint tasks.
 - `npm run check-types`: run TypeScript checks for the web and API workspaces.
 - `npm run format`: format TypeScript, TSX, and Markdown files with Prettier.
@@ -152,8 +175,7 @@ Landfill is not production-packaged yet.
 Current limitations:
 
 - The web app and API run as separate development services.
-- The API does not yet serve the built web app.
-- There is not yet a production API `build` and `start` flow.
+- There is no production reverse proxy or service routing setup yet.
 - There is no Docker image or Compose setup yet.
 - There is no native installer yet.
 - There is no authentication yet.
@@ -172,9 +194,10 @@ the same network.
 
 ```txt
 Landfill runtime
-  Express API
-  built React web UI served by Express
-  one HTTP port
+  web/static service
+  Express API service
+  router/proxy for / and /api
+  one public HTTP port
   one DATA_DIR for database and files
 ```
 
@@ -187,19 +210,27 @@ http://192.168.1.50
 
 ## Delivery Vision
 
-Landfill will support multiple delivery paths that all wrap the same production
-runtime.
+Landfill will support multiple delivery paths that all expose the same public
+URL shape.
 
 ```txt
-Same app runtime
+Same public app shape
   -> Docker Compose
   -> Native installer/package
   -> Raw npm install
 ```
 
-The goal is to avoid separate behavior for each installation type. Docker,
-native packages, and npm installs should all use the same API, same web build,
-same SQLite database model, same migrations, and same `DATA_DIR` layout.
+The goal is to avoid separate browser-facing behavior for each installation
+type. Docker, native packages, and npm installs should all expose:
+
+```txt
+/      -> web app
+/api   -> API
+```
+
+Internally, the web service and API service can still run on separate ports.
+The mapping belongs to the development server, reverse proxy, or package
+runtime, not to the frontend code.
 
 ## Planned Delivery Paths
 
@@ -212,25 +243,52 @@ Planned Compose shape:
 
 ```yaml
 services:
-  landfill:
-    image: landfill/landfill:latest
-    ports:
-      - "3000:3000"
+  web:
+    image: landfill/web:latest
+
+  api:
+    image: landfill/api:latest
     volumes:
       - ./landfill-data:/data
     environment:
       DATA_DIR: /data
       HOST: 0.0.0.0
       PORT: 3000
+
+  proxy:
+    image: landfill/proxy:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+      - api
 ```
 
-The Docker deployment is planned as a single application container. The default
-install will not require a separate Postgres, MySQL, or Redis container.
+The public routing model is:
+
+```txt
+/      -> web service
+/api   -> API service
+```
+
+The API service owns persistent data:
+
+```yaml
+services:
+  api:
+    volumes:
+      - ./landfill-data:/data
+    environment:
+      DATA_DIR: /data
+```
+
+The default Docker install will not require a separate Postgres, MySQL, or Redis
+container.
 
 ### 2. Native Installer / Package
 
 Native installers are planned as the friendlier desktop/home-user packaging
-option. They will run the same production server and use OS-specific data
+option. They will use the same web, API, and routing model with OS-specific data
 locations.
 
 Possible data directory defaults:
@@ -296,19 +354,19 @@ SQLite usage assumptions:
 ## Planned Production Runtime
 
 The production runtime work is centered around turning the current development
-setup into one server process:
+setup into a packaged service layout:
 
-- Add a production API `build` script.
-- Add a production API `start` script.
 - Build `apps/web`.
-- Serve the built web UI from `apps/api`.
+- Build `apps/api`.
+- Serve the built web UI from a web/static service.
+- Route `/api` requests to the API service.
 - Use same-origin API calls such as `/api`.
 - Expose one public HTTP port.
 - Keep all mutable data under `DATA_DIR`.
 - Add a health check endpoint.
 
-Once this runtime exists, Docker and native installers become wrappers around
-the same application rather than separate versions of the app.
+Once this runtime exists, Docker and native installers can wrap the same web,
+API, and routing model rather than becoming separate versions of the app.
 
 ## Planned Security Work
 
@@ -383,9 +441,8 @@ publishing updates.
 
 Near-term:
 
-- Add production API build/start scripts.
-- Serve the built web UI from the API.
-- Switch production web calls to same-origin `/api`.
+- Add production web/static serving.
+- Add `/api` routing through a proxy or package runtime.
 - Add Dockerfile and Docker Compose setup.
 - Add persistent-volume upgrade testing.
 
