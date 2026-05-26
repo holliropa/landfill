@@ -1,15 +1,91 @@
 # Landfill
 
-Landfill is a local file storage app built as an npm workspaces monorepo. The
-web app provides a folder explorer, uploads, search, file downloads, archive
-downloads, and basic item details. The API stores metadata in SQLite through
-Prisma and writes uploaded files to disk.
+Landfill is a local-first file storage app for home and small local network use.
+It is built as a TypeScript npm workspaces monorepo with a React web client, an
+Express API, SQLite metadata storage, and disk-backed file storage.
 
-## Apps
+The project is currently a development-stage local file manager. It already
+supports browsing folders, uploading files, searching, downloading individual
+files, creating archive downloads, viewing basic item details, and generating
+image thumbnails.
 
-- `apps/web`: Vite, React, React Router, and TanStack Query client.
-- `apps/api`: Express API, Prisma, SQLite, Multer uploads, Sharp thumbnails, and
-  Archiver download jobs.
+## Current State
+
+Landfill currently runs as two development services:
+
+```txt
+apps/web  -> Vite React client
+apps/api  -> Express API
+```
+
+The API listens on `http://localhost:3000` and exposes routes under `/api`.
+The web app is served by Vite, usually on `http://localhost:5173`.
+
+In development, the web client defaults to calling the API on the same hostname
+at port `3000`, which makes it usable from other devices on the local network
+when the development servers are bound to the LAN.
+
+## Current Features
+
+- Folder explorer with root and nested folders.
+- File uploads through the browser.
+- File and folder search.
+- File downloads.
+- Multi-item archive downloads.
+- Basic file and folder details.
+- File renaming and deletion.
+- Folder creation, renaming, and deletion.
+- Image thumbnail generation through the API.
+- Raw file streaming for browser previews.
+- SQLite-backed metadata.
+- Disk-backed uploaded file storage.
+- Automatic database initialization and migrations at API startup.
+
+## Current Architecture
+
+```txt
+landfill/
+  apps/
+    web/      React, Vite, React Router, TanStack Query
+    api/      Express, Multer, Sharp, Archiver
+  packages/
+    db/       Drizzle schema, migrations, SQLite initialization
+```
+
+The web client owns the browser experience and keeps server state in TanStack
+Query. Folder content queries use `folderKeys.content(folderId)`, and mutations
+invalidate affected folder data after create, upload, rename, and delete
+operations.
+
+The API owns persistence and file processing:
+
+- Folder and file metadata live in SQLite through Drizzle models.
+- Uploaded files are stored on disk.
+- The database is initialized through `@landfill/db`.
+- Drizzle migrations are bundled in `packages/db`.
+- Thumbnail requests are generated from the stored file.
+- Archive download jobs create temporary archive files that can be polled and
+  downloaded when ready.
+
+## Current Data Layout
+
+The API uses `DATA_DIR` as the root for application data.
+
+```txt
+DATA_DIR/
+  database/
+    main.db
+    main.db-wal
+    main.db-shm
+  storage/
+    uploads/
+    downloads/
+```
+
+The database stores metadata. The uploaded files themselves live in
+`storage/uploads`. Generated archive downloads live in `storage/downloads`.
+
+SQLite is opened in WAL mode for better durability and local concurrency.
 
 ## Requirements
 
@@ -27,21 +103,13 @@ npm install
 Create or update `apps/api/.env`:
 
 ```sh
-DATABASE_URL="file:./dev.db"
+DATA_DIR="./.landfill"
+HOST="0.0.0.0"
+PORT="3000"
 ```
 
-Apply Prisma migrations from the API workspace when the database needs to be
-created or updated:
-
-```sh
-npm exec prisma migrate dev --workspace @landfill/api
-```
-
-Generate the Prisma client after schema changes:
-
-```sh
-npm exec prisma generate --workspace @landfill/api
-```
+The API creates the configured data directories on startup and initializes the
+SQLite database automatically.
 
 ## Development
 
@@ -51,13 +119,22 @@ Run both apps through Turbo:
 npm run dev
 ```
 
-The API listens on `http://localhost:3000` and exposes routes under `/api`.
-The web app is served by Vite, usually on `http://localhost:5173`.
+Open the web app:
+
+```txt
+http://localhost:5173
+```
+
+The API is available at:
+
+```txt
+http://localhost:3000/api
+```
 
 ## Scripts
 
 - `npm run dev`: start all workspace development servers.
-- `npm run build`: build all workspaces.
+- `npm run build`: build workspaces that currently define a build task.
 - `npm run lint`: run workspace lint tasks.
 - `npm run check-types`: run TypeScript checks for the web and API workspaces.
 - `npm run format`: format TypeScript, TSX, and Markdown files with Prettier.
@@ -68,23 +145,260 @@ Workspace scripts:
 - `npm run check-types --workspace @landfill/api`: `tsc --noEmit`.
 - `npm run lint --workspace @landfill/web`: ESLint for the web app.
 
-## Architecture Notes
+## Current Limitations
 
-The web client keeps server state in TanStack Query. Folder content queries use
-`folderKeys.content(folderId)` and mutations invalidate the affected folder
-after create, upload, rename, and delete operations.
+Landfill is not production-packaged yet.
 
-The API owns persistence and file processing:
+Current limitations:
 
-- Folder and file metadata live in SQLite through Prisma models.
-- Uploaded files are stored on disk with metadata retained in the database.
-- Thumbnail requests are generated through the existing file thumbnail route.
-- Multi-item downloads create `DownloadJob` records and archive files that can
-  be polled and downloaded when ready.
+- The web app and API run as separate development services.
+- The API does not yet serve the built web app.
+- There is not yet a production API `build` and `start` flow.
+- There is no Docker image or Compose setup yet.
+- There is no native installer yet.
+- There is no authentication yet.
+- Backup and restore behavior is not yet documented as a user-facing workflow.
 
-## Prisma Notes
+These limitations are part of the next delivery work, not blockers for local
+development.
 
-Prisma config lives in `apps/api/prisma.config.ts`. The schema is split under
-`apps/api/prisma/schema`, with migrations under `apps/api/prisma/migrations`.
-The development SQLite database is `apps/api/dev.db` when using the default
-`DATABASE_URL`.
+---
+
+# Future Direction
+
+The long-term shape of Landfill is a self-contained home storage appliance: one
+install, one local server, one data directory, and browser access from devices on
+the same network.
+
+```txt
+Landfill runtime
+  Express API
+  built React web UI served by Express
+  one HTTP port
+  one DATA_DIR for database and files
+```
+
+Example LAN access:
+
+```txt
+http://landfill.local
+http://192.168.1.50
+```
+
+## Delivery Vision
+
+Landfill will support multiple delivery paths that all wrap the same production
+runtime.
+
+```txt
+Same app runtime
+  -> Docker Compose
+  -> Native installer/package
+  -> Raw npm install
+```
+
+The goal is to avoid separate behavior for each installation type. Docker,
+native packages, and npm installs should all use the same API, same web build,
+same SQLite database model, same migrations, and same `DATA_DIR` layout.
+
+## Planned Delivery Paths
+
+### 1. Docker Compose
+
+Docker Compose is the planned primary delivery path for home servers, NAS
+devices, mini PCs, and other always-on machines.
+
+Planned Compose shape:
+
+```yaml
+services:
+  landfill:
+    image: landfill/landfill:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./landfill-data:/data
+    environment:
+      DATA_DIR: /data
+      HOST: 0.0.0.0
+      PORT: 3000
+```
+
+The Docker deployment is planned as a single application container. The default
+install will not require a separate Postgres, MySQL, or Redis container.
+
+### 2. Native Installer / Package
+
+Native installers are planned as the friendlier desktop/home-user packaging
+option. They will run the same production server and use OS-specific data
+locations.
+
+Possible data directory defaults:
+
+```txt
+Windows:
+  %ProgramData%\Landfill
+  or %LOCALAPPDATA%\Landfill
+
+macOS:
+  ~/Library/Application Support/Landfill
+  or /Library/Application Support/Landfill
+
+Linux:
+  ~/.local/share/landfill
+  or /var/lib/landfill for service installs
+```
+
+The native package should not require users to install or manage a separate
+database server.
+
+### 3. Raw npm Install
+
+Raw npm install remains useful for development, contributors, and advanced
+manual installs.
+
+This path gives the user direct control over:
+
+- Node.js version.
+- Native dependency installation.
+- Ports.
+- Startup behavior.
+- Updates.
+- Data location.
+
+It is the most transparent path, but also the least polished for normal users.
+
+## Database Direction
+
+SQLite remains the default database across all delivery paths.
+
+Landfill is a local-first file storage app, so an embedded database fits the
+product better than requiring a separate database server:
+
+- no database service to install or maintain
+- one data directory to back up
+- works in Docker, native installers, and npm installs
+- startup migrations are simple
+- metadata stays beside the uploaded files
+- suitable for folders, files, download jobs, settings, users, and sessions
+
+Using SQLite everywhere also keeps migrations, backup behavior, and update
+testing consistent. Docker deployments should not use a different default
+database than native installs.
+
+SQLite usage assumptions:
+
+- The database should live on a local disk.
+- The database and uploaded files should be backed up together.
+- Landfill is aimed at home and small local network use.
+- Enterprise-scale multi-user storage is outside the default target.
+
+## Planned Production Runtime
+
+The production runtime work is centered around turning the current development
+setup into one server process:
+
+- Add a production API `build` script.
+- Add a production API `start` script.
+- Build `apps/web`.
+- Serve the built web UI from `apps/api`.
+- Use same-origin API calls such as `/api`.
+- Expose one public HTTP port.
+- Keep all mutable data under `DATA_DIR`.
+- Add a health check endpoint.
+
+Once this runtime exists, Docker and native installers become wrappers around
+the same application rather than separate versions of the app.
+
+## Planned Security Work
+
+Authentication is required before Landfill is suitable for normal LAN use.
+Without it, anyone on the local network can upload, download, rename, or delete
+files.
+
+Planned first version:
+
+- First-run setup.
+- Local admin account or passphrase.
+- Session-based browser login.
+- Protected API routes.
+
+Possible later additions:
+
+- Multiple local users.
+- Share links.
+- Per-folder permissions.
+- Read-only access.
+
+## Planned Backup And Restore Story
+
+Landfill's backup model is intended to be simple:
+
+```txt
+Back up DATA_DIR.
+Restore DATA_DIR.
+Start Landfill.
+```
+
+The backup documentation should explain:
+
+- what files live in `DATA_DIR`
+- how to stop the app before a clean backup
+- how to restore onto a new machine
+- how Docker volumes map to the data directory
+- how native installers choose the data directory
+- what to expect from SQLite WAL files
+
+## Planned Upgrade Testing Flow
+
+Docker will be used as part of the development and release process to test
+stateful updates against persistent data.
+
+Planned flow:
+
+```txt
+1. Develop locally with npm/dev servers.
+2. Build a Docker image.
+3. Start it with a persistent DATA_DIR volume.
+4. Upload files and use the app like a real user.
+5. Make code, schema, or storage changes.
+6. Build the next image.
+7. Restart the container against the same DATA_DIR.
+8. Verify migrations, existing files, downloads, thumbnails, and searches.
+```
+
+This flow is especially important for changes to:
+
+- SQLite schema and migrations.
+- Physical file layout.
+- Stored file names.
+- Cleanup behavior.
+- Archive jobs.
+- Backup and restore expectations.
+
+Old `DATA_DIR` samples can be kept around and used as upgrade fixtures before
+publishing updates.
+
+## Roadmap Snapshot
+
+Near-term:
+
+- Add production API build/start scripts.
+- Serve the built web UI from the API.
+- Switch production web calls to same-origin `/api`.
+- Add Dockerfile and Docker Compose setup.
+- Add persistent-volume upgrade testing.
+
+Next:
+
+- Add first-run setup and authentication.
+- Document backup and restore.
+- Add release/update instructions.
+- Add health checks and runtime diagnostics.
+
+Later:
+
+- Native installers/packages.
+- Better LAN discovery.
+- Multi-user support.
+- More advanced sharing and permissions.
