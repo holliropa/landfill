@@ -233,11 +233,11 @@ Landfill is not production-packaged yet.
 Current limitations:
 
 - The web app and API run as separate development services.
-- There is no production reverse proxy or service routing setup yet.
-- There is no Docker image or Compose setup yet.
+- Docker Compose exists, but images are not optimized yet.
+- Docker images are not published to a registry yet.
 - There is no native installer yet.
 - There is no authentication yet.
-- Backup and restore behavior is not yet documented as a user-facing workflow.
+- Backup and restore behavior is only partially documented.
 
 These limitations are part of the next delivery work, not blockers for local
 development.
@@ -294,32 +294,33 @@ runtime, not to the frontend code.
 
 ### 1. Docker Compose
 
-Docker Compose is the planned primary delivery path for home servers, NAS
-devices, mini PCs, and other always-on machines.
+Docker Compose is the primary delivery path for home servers, NAS devices, mini
+PCs, and other always-on machines.
 
-Planned Compose shape:
+The current Compose setup uses two services:
 
 ```yaml
 services:
-  web:
-    image: landfill/web:latest
-
   api:
-    image: landfill/api:latest
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     volumes:
-      - ./landfill-data:/data
+      - landfill-data:/data
     environment:
       DATA_DIR: /data
       HOST: 0.0.0.0
       PORT: 3000
 
   proxy:
-    image: landfill/proxy:latest
+    build:
+      context: .
+      dockerfile: infra/caddy/Dockerfile
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
-      - web
-      - api
+      api:
+        condition: service_healthy
 ```
 
 The public routing model is:
@@ -329,19 +330,26 @@ The public routing model is:
 /api   -> API service
 ```
 
-The API service owns persistent data:
+The `proxy` service runs Caddy and serves the built React app from `/srv/web`.
+It also routes `/api` requests to the `api` service.
+
+The API service owns persistent data through the `landfill-data` Docker volume:
 
 ```yaml
 services:
   api:
     volumes:
-      - ./landfill-data:/data
+      - landfill-data:/data
     environment:
       DATA_DIR: /data
 ```
 
 The default Docker install will not require a separate Postgres, MySQL, or Redis
 container.
+
+A future Docker layout may split the built web app and reverse proxy into
+separate services, but the current two-container setup is the first supported
+production-shaped runtime.
 
 ### 2. Native Installer / Package
 
@@ -411,20 +419,25 @@ SQLite usage assumptions:
 
 ## Planned Production Runtime
 
-The production runtime work is centered around turning the current development
-setup into a packaged service layout:
+The current Docker runtime already provides the first packaged service layout:
 
-- Build `apps/web`.
-- Build `apps/api`.
-- Serve the built web UI from a web/static service.
-- Route `/api` requests to the API service.
-- Use same-origin API calls such as `/api`.
-- Expose one public HTTP port.
-- Keep all mutable data under `DATA_DIR`.
-- Add a health check endpoint.
+- `apps/web` is built into static files.
+- `apps/api` is built into `dist/index.js`.
+- Caddy serves the built web UI.
+- Caddy routes `/api` requests to the API service.
+- The frontend uses same-origin API calls through `/api`.
+- Docker exposes one public HTTP port through the proxy.
+- The API stores mutable data under `DATA_DIR`.
+- API and proxy healthchecks are configured.
 
-Once this runtime exists, Docker and native installers can wrap the same web,
-API, and routing model rather than becoming separate versions of the app.
+Remaining production-runtime work is focused on hardening rather than proving
+the shape:
+
+- Optimize Docker image size and dependency installation.
+- Publish versioned images.
+- Add release and update instructions.
+- Add a complete backup and restore workflow.
+- Test LAN access from another device.
 
 ## Planned Security Work
 
@@ -465,6 +478,10 @@ The backup documentation should explain:
 - how native installers choose the data directory
 - what to expect from SQLite WAL files
 
+The Docker section documents the current volume location and the difference
+between `docker compose down` and `docker compose down -v`. A fuller workflow is
+still needed for exporting, storing, and restoring backups.
+
 ## Planned Upgrade Testing Flow
 
 Docker will be used as part of the development and release process to test
@@ -499,17 +516,16 @@ publishing updates.
 
 Near-term:
 
-- Add production web/static serving.
-- Add `/api` routing through a proxy or package runtime.
-- Add Dockerfile and Docker Compose setup.
-- Add persistent-volume upgrade testing.
+- Document backup and restore.
+- Optimize Docker images.
+- Add release/update instructions.
+- Test LAN access from another device.
 
 Next:
 
 - Add first-run setup and authentication.
-- Document backup and restore.
-- Add release/update instructions.
-- Add health checks and runtime diagnostics.
+- Add runtime diagnostics.
+- Publish versioned Docker images.
 
 Later:
 
