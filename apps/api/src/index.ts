@@ -20,6 +20,10 @@ app.use("/api/folders", folderRoutes);
 app.use("/api/downloads", downloadRoutes);
 app.use("/api/storage", storageRoutes);
 
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 void cleanupExpiredJobs();
 setInterval(
   () => {

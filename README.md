@@ -154,6 +154,64 @@ starting the web workspace:
 API_PROXY_TARGET="http://localhost:3001" npm run dev --workspace @landfill/web
 ```
 
+## Docker
+
+Landfill has an initial Docker Compose setup with two services:
+
+```txt
+api     -> Express API, SQLite database, uploaded files
+proxy   -> Caddy, built React app, /api routing to the API service
+```
+
+Start the Docker deployment from the repository root:
+
+```sh
+docker compose up --build
+```
+
+Open the app:
+
+```txt
+http://localhost:8080
+```
+
+The API is routed through the same public origin:
+
+```txt
+http://localhost:8080/api
+```
+
+Health check:
+
+```txt
+http://localhost:8080/api/health
+```
+
+Stop the containers:
+
+```sh
+docker compose down
+```
+
+Application data is stored in the `landfill-data` Docker volume and mounted into
+the API container at `/data`.
+
+```txt
+/data/database/main.db
+/data/storage/uploads/
+/data/storage/downloads/
+```
+
+Stopping containers with `docker compose down` keeps the volume. To remove the
+containers and delete the stored Landfill data:
+
+```sh
+docker compose down -v
+```
+
+Use `-v` carefully. It deletes the Docker volume that contains the SQLite
+database and uploaded files.
+
 ## Scripts
 
 - `npm run dev`: start all workspace development servers.
