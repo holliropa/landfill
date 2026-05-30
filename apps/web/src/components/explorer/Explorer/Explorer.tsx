@@ -1,4 +1,4 @@
-﻿import styles from "./Explorer.module.css";
+import styles from "./Explorer.module.css";
 import { ExplorerList } from "../ExplorerList";
 import React, { useMemo, useState } from "react";
 import type { ExplorerItem } from "../types";
@@ -13,22 +13,49 @@ import { useFolderNavigation } from "@/hooks/useFolderNavigation";
 import { useExplorerKeyboardNavigation } from "./hooks/useExplorerKeyboardNavigation";
 import { useExplorerSelection } from "./hooks/useExplorerSelection";
 import { useExplorerFileViewer } from "./hooks/useExplorerFileViewer";
+import { useExplorerItemActions } from "./hooks/useExplorerItemActions";
+import {
+  DownloadIcon,
+  ExternalLinkIcon,
+  FileEditIcon,
+  InfoIcon,
+  TrashIcon,
+} from "lucide-react";
 
 type ExplorerProps = {
   items: ExplorerItem[];
   location?: string;
+  isLoading?: boolean;
+  isError?: boolean;
 };
 
-export function Explorer({ items, location }: ExplorerProps) {
+type ContextMenuState = {
+  x: number;
+  y: number;
+  items: ExplorerItem[];
+} | null;
+
+export function Explorer({
+  items,
+  location = "root",
+  isLoading = false,
+  isError = false,
+}: ExplorerProps) {
   const openFolder = useFolderNavigation();
   const selection = useExplorerSelection({ items });
   const fileViewer = useExplorerFileViewer({ items });
   const [showDetails, setShowDetails] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(
     items.length > 0 ? 0 : null,
   );
   const [isExplorerKeyboardActive, setIsExplorerKeyboardActive] =
     useState(false);
+
+  const actions = useExplorerItemActions({
+    folderId: location,
+    onAfterDelete: selection.resetSelection,
+  });
 
   const clampedFocusedIndex =
     focusedIndex === null || items.length === 0
@@ -53,12 +80,10 @@ export function Explorer({ items, location }: ExplorerProps) {
   }, [location, selection.selectedItems]);
 
   const handleOpenItem = (index: number) => {
-    console.log(`Opening item at index: ${index}`);
     const item = items[index];
     if (!item) return;
 
     if (item.kind === "folder") {
-      console.log(`Opening folder: ${item.name}`);
       openFolder(item);
       selection.resetSelection();
       return;
@@ -75,6 +100,33 @@ export function Explorer({ items, location }: ExplorerProps) {
     selection.handleClickItem(index, event);
   };
 
+  const handleContextMenuItem = (index: number, event: React.MouseEvent) => {
+    event.preventDefault();
+
+    const item = items[index];
+    if (!item) return;
+
+    setFocusedIndex(index);
+
+    const targetItems = selection.selectedKeys.has(item.key)
+      ? selection.selectedItems
+      : [item];
+
+    if (!selection.selectedKeys.has(item.key)) {
+      selection.toggleSingle(index, true);
+    }
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      items: targetItems,
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
   const toggleDetails = () => {
     setShowDetails((prevState) => !prevState);
   };
@@ -83,6 +135,7 @@ export function Explorer({ items, location }: ExplorerProps) {
     items,
     focusedIndex: clampedFocusedIndex,
     selectedKeys: selection.selectedKeys,
+    selectedItems: selection.selectedItems,
     lastSelectedIndex: selection.lastSelectedIndex,
     enabled: !fileViewer.isOpen && isExplorerKeyboardActive,
     setFocusedIndex,
@@ -90,16 +143,23 @@ export function Explorer({ items, location }: ExplorerProps) {
     setLastSelectedIndex: selection.setLastSelectedIndex,
     resetSelection: selection.resetSelection,
     openItem: handleOpenItem,
+    renameItems: actions.renameItems,
+    deleteItems: actions.deleteItems,
+    downloadItems: actions.downloadItems,
   });
 
   return (
     <>
-      <div className={styles.root}>
+      <div className={styles.root} onClick={closeContextMenu}>
         <div className={styles.toolbar}>
           <ManipulationBar
             selectedItems={selection.selectedItems}
+            isDownloading={actions.isDownloading}
             onDeselectAll={selection.resetSelection}
             onShowDetails={toggleDetails}
+            onRename={actions.renameItems}
+            onDownload={actions.downloadItems}
+            onDelete={actions.deleteItems}
           />
         </div>
         <div className={styles.workspace}>
@@ -112,6 +172,9 @@ export function Explorer({ items, location }: ExplorerProps) {
               onKeyboardActiveChange={setIsExplorerKeyboardActive}
               onItemClick={handleClickItem}
               onItemOpen={handleOpenItem}
+              onItemContextMenu={handleContextMenuItem}
+              isLoading={isLoading}
+              isError={isError}
             />
           </div>
           {showDetails && (
@@ -123,6 +186,41 @@ export function Explorer({ items, location }: ExplorerProps) {
             </aside>
           )}
         </div>
+        {contextMenu && (
+          <ExplorerContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={contextMenu.items}
+            isDownloading={actions.isDownloading}
+            onOpen={() => {
+              closeContextMenu();
+              const item = contextMenu.items[0];
+              const itemIndex = items.findIndex(
+                (candidate) => candidate.key === item?.key,
+              );
+
+              if (itemIndex >= 0) {
+                handleOpenItem(itemIndex);
+              }
+            }}
+            onRename={() => {
+              closeContextMenu();
+              void actions.renameItems(contextMenu.items);
+            }}
+            onDownload={() => {
+              closeContextMenu();
+              void actions.downloadItems(contextMenu.items);
+            }}
+            onDelete={() => {
+              closeContextMenu();
+              void actions.deleteItems(contextMenu.items);
+            }}
+            onDetails={() => {
+              closeContextMenu();
+              setShowDetails(true);
+            }}
+          />
+        )}
       </div>
       {fileViewer.openedId !== null && (
         <FileViewer
@@ -135,8 +233,97 @@ export function Explorer({ items, location }: ExplorerProps) {
             onNext: fileViewer.openNextFile,
             onPrevious: fileViewer.openPreviousFile,
           }}
+          onDownload={
+            fileViewer.openedFile
+              ? () => {
+                  void actions.downloadItems([fileViewer.openedFile!]);
+                }
+              : undefined
+          }
+          onDelete={
+            fileViewer.openedFile
+              ? () => {
+                  const openedFile = fileViewer.openedFile;
+                  if (!openedFile) return;
+
+                  fileViewer.closeFile();
+                  void actions.deleteItems([openedFile]);
+                }
+              : undefined
+          }
         />
       )}
     </>
+  );
+}
+
+type ExplorerContextMenuProps = {
+  x: number;
+  y: number;
+  items: ExplorerItem[];
+  isDownloading: boolean;
+  onOpen: () => void;
+  onRename: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
+  onDetails: () => void;
+};
+
+function ExplorerContextMenu({
+  x,
+  y,
+  items,
+  isDownloading,
+  onOpen,
+  onRename,
+  onDownload,
+  onDelete,
+  onDetails,
+}: ExplorerContextMenuProps) {
+  const canRename = items.length === 1;
+
+  return (
+    <div
+      className={styles.contextMenu}
+      style={{ left: x, top: y }}
+      role="menu"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <button type="button" role="menuitem" onClick={onOpen}>
+        <ExternalLinkIcon size={16} />
+        <span>Open</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        onClick={onRename}
+        disabled={!canRename}
+      >
+        <FileEditIcon size={16} />
+        <span>Rename</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        onClick={onDownload}
+        disabled={isDownloading}
+      >
+        <DownloadIcon size={16} />
+        <span>Download</span>
+      </button>
+      <button type="button" role="menuitem" onClick={onDetails}>
+        <InfoIcon size={16} />
+        <span>Details</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className={styles.dangerMenuItem}
+        onClick={onDelete}
+      >
+        <TrashIcon size={16} />
+        <span>Delete</span>
+      </button>
+    </div>
   );
 }

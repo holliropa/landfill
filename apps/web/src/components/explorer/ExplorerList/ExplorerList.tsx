@@ -1,6 +1,7 @@
-﻿import styles from "./ExploreList.module.css";
+import styles from "./ExploreList.module.css";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExplorerItem } from "../types";
+import { AlertCircleIcon, FolderOpenIcon } from "lucide-react";
 
 type Column = {
   key: "thumbnail" | "name" | "date" | "size";
@@ -18,6 +19,9 @@ export type ExplorerListProps = {
   onKeyboardActiveChange: (isActive: boolean) => void;
   onItemOpen: (index: number) => void;
   onItemClick: (index: number, event: React.MouseEvent) => void;
+  onItemContextMenu: (index: number, event: React.MouseEvent) => void;
+  isLoading?: boolean;
+  isError?: boolean;
 };
 
 export function ExplorerList({
@@ -28,6 +32,9 @@ export function ExplorerList({
   onKeyboardActiveChange,
   onItemOpen,
   onItemClick,
+  onItemContextMenu,
+  isLoading = false,
+  isError = false,
 }: ExplorerListProps) {
   const [columns, setColumns] = useState<Column[]>([
     { key: "thumbnail", label: "", width: 48, minWidth: 48, resizable: false },
@@ -47,6 +54,7 @@ export function ExplorerList({
   const rowRefs = useRef<Array<HTMLDivElement | null>>([]);
   const onItemClickRef = useRef(onItemClick);
   const onItemOpenRef = useRef(onItemOpen);
+  const onItemContextMenuRef = useRef(onItemContextMenu);
 
   const gridTemplateColumns = useMemo(() => {
     return columns.map((column) => `${column.width}px`).join(" ");
@@ -55,7 +63,8 @@ export function ExplorerList({
   useEffect(() => {
     onItemClickRef.current = onItemClick;
     onItemOpenRef.current = onItemOpen;
-  }, [onItemClick, onItemOpen]);
+    onItemContextMenuRef.current = onItemContextMenu;
+  }, [onItemClick, onItemOpen, onItemContextMenu]);
 
   useEffect(() => {
     if (focusedIndex === null) return;
@@ -94,6 +103,14 @@ export function ExplorerList({
   const handleRowOpen = useCallback((index: number) => {
     onItemOpenRef.current(index);
   }, []);
+
+  const handleRowContextMenu = useCallback(
+    (index: number, event: React.MouseEvent) => {
+      bodyRef.current?.focus();
+      onItemContextMenuRef.current(index, event);
+    },
+    [],
+  );
 
   function startResize(
     event: React.MouseEvent<HTMLDivElement>,
@@ -166,6 +183,7 @@ export function ExplorerList({
         aria-activedescendant={
           focusedIndex === null ? undefined : `explorer-row-${focusedIndex}`
         }
+        aria-busy={isLoading || undefined}
         onFocusCapture={() => {
           onKeyboardActiveChange(true);
 
@@ -179,8 +197,20 @@ export function ExplorerList({
           }
         }}
       >
-        {items.length === 0 ? (
-          <div className={styles.emptyState}>This folder is empty.</div>
+        {isLoading ? (
+          <ExplorerLoadingRows gridTemplateColumns={gridTemplateColumns} />
+        ) : isError ? (
+          <div className={styles.messageState}>
+            <AlertCircleIcon size={24} />
+            <strong>Could not load this folder</strong>
+            <span>Check that the API is running, then try again.</span>
+          </div>
+        ) : items.length === 0 ? (
+          <div className={styles.messageState}>
+            <FolderOpenIcon size={28} />
+            <strong>This folder is empty</strong>
+            <span>Use the toolbar above to upload files or create a folder.</span>
+          </div>
         ) : (
           items.map((item, index) => {
             const isSelected = selectedKeys.has(item.key);
@@ -198,6 +228,7 @@ export function ExplorerList({
                 }}
                 onItemClick={handleRowClick}
                 onItemOpen={handleRowOpen}
+                onItemContextMenu={handleRowContextMenu}
               />
             );
           })
@@ -216,6 +247,7 @@ type ExplorerRowProps = {
   rowRef: (element: HTMLDivElement | null) => void;
   onItemOpen: (index: number) => void;
   onItemClick: (index: number, event: React.MouseEvent) => void;
+  onItemContextMenu: (index: number, event: React.MouseEvent) => void;
 };
 
 const ExplorerRow = React.memo(function ExplorerRow({
@@ -227,6 +259,7 @@ const ExplorerRow = React.memo(function ExplorerRow({
   rowRef,
   onItemOpen,
   onItemClick,
+  onItemContextMenu,
 }: ExplorerRowProps) {
   const formattedDate = useMemo(
     () => formatDate(item.createdAt),
@@ -248,6 +281,7 @@ const ExplorerRow = React.memo(function ExplorerRow({
       onClick={(event) => {
         onItemClick(index, event);
       }}
+      onContextMenu={(event) => onItemContextMenu(index, event)}
       onDoubleClick={() => onItemOpen(index)}
       aria-selected={isSelected}
       data-focused={isFocused || undefined}
@@ -271,6 +305,38 @@ const ExplorerRow = React.memo(function ExplorerRow({
     </div>
   );
 });
+
+function ExplorerLoadingRows({
+  gridTemplateColumns,
+}: {
+  gridTemplateColumns: string;
+}) {
+  return (
+    <>
+      {Array.from({ length: 8 }, (_, index) => (
+        <div
+          key={index}
+          className={styles.loadingRow}
+          style={{ gridTemplateColumns }}
+          aria-hidden="true"
+        >
+          <div className={`${styles.cell} ${styles.thumbnailCell}`}>
+            <span className={styles.loadingThumb} />
+          </div>
+          <div className={styles.cell}>
+            <span className={styles.loadingLine} />
+          </div>
+          <div className={styles.cell}>
+            <span className={styles.loadingLine} />
+          </div>
+          <div className={styles.cell}>
+            <span className={styles.loadingLineShort} />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-GB", {

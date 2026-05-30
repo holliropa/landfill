@@ -29,6 +29,8 @@ export type FileViewerProps = {
     onPrevious: () => void;
     onNext: () => void;
   };
+  onDownload?: () => void;
+  onDelete?: () => void;
 };
 
 function formatFileName(name: string) {
@@ -87,6 +89,8 @@ export function FileViewer({
   name,
   onClose,
   navigation,
+  onDownload,
+  onDelete,
 }: FileViewerProps) {
   useKeyboardShortcut("ArrowRight", () => navigation?.onNext(), {
     enabled: navigation !== undefined,
@@ -109,6 +113,8 @@ export function FileViewer({
             variant="ghost"
             size="large"
             onClick={onClose}
+            aria-label="Close preview"
+            title="Close"
           />
           {navigation && (
             <>
@@ -120,6 +126,8 @@ export function FileViewer({
                   size="large"
                   disabled={!navigation.hasPrevious}
                   onClick={navigation.onPrevious}
+                  aria-label="Previous file"
+                  title="Previous"
                 />
                 <IconButton
                   icon={<ArrowRightIcon />}
@@ -127,6 +135,8 @@ export function FileViewer({
                   size="large"
                   disabled={!navigation.hasNext}
                   onClick={navigation.onNext}
+                  aria-label="Next file"
+                  title="Next"
                 />
               </div>
             </>
@@ -146,13 +156,19 @@ export function FileViewer({
             icon={<DownloadIcon />}
             variant="ghost"
             size="large"
-            onClick={onClose}
+            onClick={onDownload}
+            disabled={!onDownload}
+            aria-label="Download file"
+            title="Download"
           />
           <IconButton
             icon={<TrashIcon color="#a2030d" />}
             variant="ghost"
             size="large"
-            onClick={onClose}
+            onClick={onDelete}
+            disabled={!onDelete}
+            aria-label="Delete file"
+            title="Delete"
           />
         </div>
       </div>

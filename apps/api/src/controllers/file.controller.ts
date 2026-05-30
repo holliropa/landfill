@@ -20,8 +20,6 @@ export async function uploadFilesHandler(req: Request, res: Response) {
     return res.status(400).json({ error: "Folder ID is required" });
   }
 
-  console.log(`Uploading to ${folderId}`);
-
   const result = await createFiles(
     uploadedFiles.map((file) => ({
       originalName: file.originalname,

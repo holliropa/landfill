@@ -24,7 +24,15 @@ export async function getFolderHandler(req: Request, res: Response) {
     }
   }
 
-  return res.status(200).json(result.data);
+  const { parentFolder, ...restFolder } = result.data;
+
+  return res.status(200).json({
+    ...restFolder,
+    parentFolder: parentFolder ?? {
+      id: "root",
+      name: "Root",
+    },
+  });
 }
 
 export async function createFolderHandler(req: Request, res: Response) {

@@ -4,6 +4,7 @@ import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut.ts";
 
 type ExplorerKeyboardNavigationParams = {
   items: ExplorerItem[];
+  selectedItems: ExplorerItem[];
   focusedIndex: number | null;
   selectedKeys: Set<string>;
   lastSelectedIndex: number | null;
@@ -15,6 +16,9 @@ type ExplorerKeyboardNavigationParams = {
 
   resetSelection: () => void;
   openItem: (index: number) => void;
+  renameItems: (items: ExplorerItem[]) => void;
+  deleteItems: (items: ExplorerItem[]) => void;
+  downloadItems: (items: ExplorerItem[]) => void;
 };
 
 function clampIndex(index: number, itemsLength: number) {
@@ -43,6 +47,7 @@ function selectRange(items: ExplorerItem[], from: number, to: number) {
 
 export function useExplorerKeyboardNavigation({
   items,
+  selectedItems,
   focusedIndex,
   selectedKeys,
   lastSelectedIndex,
@@ -52,6 +57,9 @@ export function useExplorerKeyboardNavigation({
   setLastSelectedIndex,
   resetSelection,
   openItem,
+  renameItems,
+  deleteItems,
+  downloadItems,
 }: ExplorerKeyboardNavigationParams) {
   const hasItems = items.length > 0;
   const singleItem = selectedKeys.size == 1;
@@ -139,7 +147,6 @@ export function useExplorerKeyboardNavigation({
     "Enter",
     () => {
       const activeIndex = getActiveIndex(focusedIndex, items.length);
-      console.log(`Opening item at index: ${activeIndex}`);
       if (activeIndex === null) return;
 
       openItem(activeIndex);
@@ -193,6 +200,37 @@ export function useExplorerKeyboardNavigation({
     },
     {
       enabled: enabled && selectedKeys.size > 0,
+    },
+  );
+
+  useKeyboardShortcut(
+    "F2",
+    () => {
+      renameItems(selectedItems);
+    },
+    {
+      enabled: enabled && selectedItems.length === 1,
+    },
+  );
+
+  useKeyboardShortcut(
+    "Delete",
+    () => {
+      deleteItems(selectedItems);
+    },
+    {
+      enabled: enabled && selectedItems.length > 0,
+    },
+  );
+
+  useKeyboardShortcut(
+    "d",
+    () => {
+      downloadItems(selectedItems);
+    },
+    {
+      ctrlKey: true,
+      enabled: enabled && selectedItems.length > 0,
     },
   );
 }

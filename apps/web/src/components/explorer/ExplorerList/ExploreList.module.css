@@ -74,7 +74,7 @@
     min-width: 100%;
     min-height: 44px;
     border-bottom: 1px solid var(--divider-subtle);
-    transition: background-color 120ms ease;
+    transition: background-color 120ms ease, box-shadow 120ms ease;
 }
 
 .row:hover {
@@ -83,11 +83,12 @@
 }
 
 .selectedRow {
-    background: var(--surface-selected);
+    background: color-mix(in srgb, var(--input-focus) 16%, var(--surface-selected));
+    box-shadow: inset 3px 0 0 var(--input-focus);
 }
 
 .selectedRow:hover {
-    background: var(--surface-hover);
+    background: color-mix(in srgb, var(--input-focus) 20%, var(--surface-hover));
 }
 
 .cell {
@@ -128,17 +129,80 @@
     font-variant-numeric: tabular-nums;
 }
 
-.emptyState {
+.messageState {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 160px;
+    gap: 8px;
+    min-height: 220px;
     padding: 24px;
-    font-size: 14px;
+    color: var(--text-muted);
     text-align: center;
 }
 
+.messageState strong {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.messageState span {
+    max-width: 320px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
 .row[data-focused] {
-    outline: 2px solid var(--border-subtle);
+    outline: 2px solid color-mix(in srgb, var(--input-focus) 45%, transparent);
     outline-offset: -2px;
+}
+
+.loadingRow {
+    display: grid;
+    align-items: center;
+    width: max-content;
+    min-width: 100%;
+    min-height: 44px;
+    border-bottom: 1px solid var(--divider-subtle);
+}
+
+.loadingThumb,
+.loadingLine,
+.loadingLineShort {
+    display: block;
+    border-radius: 6px;
+    background: linear-gradient(
+            90deg,
+            var(--surface) 0%,
+            var(--surface-hover) 50%,
+            var(--surface) 100%
+    );
+    background-size: 200% 100%;
+    animation: loadingPulse 1.2s ease-in-out infinite;
+}
+
+.loadingThumb {
+    width: 24px;
+    height: 24px;
+}
+
+.loadingLine {
+    width: min(180px, 70%);
+    height: 12px;
+}
+
+.loadingLineShort {
+    width: 64px;
+    height: 12px;
+}
+
+@keyframes loadingPulse {
+    from {
+        background-position: 100% 0;
+    }
+
+    to {
+        background-position: -100% 0;
+    }
 }

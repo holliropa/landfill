@@ -10,7 +10,11 @@ import { FolderNavigationBar } from "@/components/FolderNavigationBar";
 export function ExplorerPage() {
   const { folderId } = useParams<{ folderId?: string }>();
   const normalizedFolderId = folderId ?? "root";
-  const { data: folderContent } = useFolderContent(normalizedFolderId);
+  const {
+    data: folderContent,
+    isLoading,
+    isError,
+  } = useFolderContent(normalizedFolderId);
 
   const items = useMemo<ExplorerItem[]>(() => {
     const folderItems = (folderContent?.folders ?? []).map((folder) => ({
@@ -42,7 +46,12 @@ export function ExplorerPage() {
         <FolderNavigationBar folderId={normalizedFolderId} />
       </div>
       <div className={styles.content}>
-        <Explorer items={items} location={normalizedFolderId} />
+        <Explorer
+          items={items}
+          location={normalizedFolderId}
+          isLoading={isLoading}
+          isError={isError}
+        />
       </div>
     </div>
   );
