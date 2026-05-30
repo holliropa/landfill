@@ -21,6 +21,9 @@ import {
   InfoIcon,
   TrashIcon,
 } from "lucide-react";
+import { FileDropZone } from "@/components/FileDropZone";
+import { useUploadFiles } from "@/lib/client";
+import { toast } from "sonner";
 
 type ExplorerProps = {
   items: ExplorerItem[];
@@ -42,6 +45,7 @@ export function Explorer({
   isError = false,
 }: ExplorerProps) {
   const openFolder = useFolderNavigation();
+  const { mutateAsync: uploadFiles } = useUploadFiles();
   const selection = useExplorerSelection({ items });
   const fileViewer = useExplorerFileViewer({ items });
   const [showDetails, setShowDetails] = useState(false);
@@ -131,6 +135,25 @@ export function Explorer({
     setShowDetails((prevState) => !prevState);
   };
 
+  const handleFilesDropped = (files: File[]) => {
+    if (files.length === 0) return;
+
+    const fileLabel = files.length === 1 ? "file" : "files";
+
+    toast.promise(
+      uploadFiles({
+        files,
+        parentFolderId: location,
+      }),
+      {
+        loading: `Uploading ${files.length} ${fileLabel}`,
+        success: `Uploaded ${files.length} ${fileLabel}`,
+        error: `Failed to upload ${files.length} ${fileLabel}`,
+        duration: 1500,
+      },
+    );
+  };
+
   useExplorerKeyboardNavigation({
     items,
     focusedIndex: clampedFocusedIndex,
@@ -164,18 +187,20 @@ export function Explorer({
         </div>
         <div className={styles.workspace}>
           <div className={styles.content}>
-            <ExplorerList
-              items={items}
-              selectedKeys={selection.selectedKeys}
-              focusedIndex={clampedFocusedIndex}
-              onFocusedIndex={setFocusedIndex}
-              onKeyboardActiveChange={setIsExplorerKeyboardActive}
-              onItemClick={handleClickItem}
-              onItemOpen={handleOpenItem}
-              onItemContextMenu={handleContextMenuItem}
-              isLoading={isLoading}
-              isError={isError}
-            />
+            <FileDropZone onFilesDropped={handleFilesDropped}>
+              <ExplorerList
+                items={items}
+                selectedKeys={selection.selectedKeys}
+                focusedIndex={clampedFocusedIndex}
+                onFocusedIndex={setFocusedIndex}
+                onKeyboardActiveChange={setIsExplorerKeyboardActive}
+                onItemClick={handleClickItem}
+                onItemOpen={handleOpenItem}
+                onItemContextMenu={handleContextMenuItem}
+                isLoading={isLoading}
+                isError={isError}
+              />
+            </FileDropZone>
           </div>
           {showDetails && (
             <aside className={styles.detailsPanel} aria-label="Details">

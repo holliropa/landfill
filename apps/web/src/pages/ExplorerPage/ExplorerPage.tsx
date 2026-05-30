@@ -1,4 +1,4 @@
-﻿import styles from "./ExplorerPage.module.css";
+import styles from "./ExplorerPage.module.css";
 import { Explorer, type ExplorerItem } from "@/components/Explorer";
 import { useParams } from "react-router-dom";
 import { useFolderContent } from "@/lib/client";
