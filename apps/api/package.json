@@ -1,6 +1,6 @@
 {
   "name": "@landfill/api",
-  "version": "0.0.0",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/index.ts",
