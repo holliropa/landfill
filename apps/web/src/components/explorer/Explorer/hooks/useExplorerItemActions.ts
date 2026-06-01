@@ -14,6 +14,7 @@ import { triggerDownload } from "@/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { useDialog } from "@/providers";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,6 +29,7 @@ export function useExplorerItemActions({
   folderId,
   onAfterDelete,
 }: ExplorerItemActionsParams) {
+  const dialog = useDialog();
   const [isDownloading, setIsDownloading] = useState(false);
   const queryClient = useQueryClient();
   const { mutateAsync: renameFile } = useRenameFile();
@@ -38,13 +40,18 @@ export function useExplorerItemActions({
       if (items.length !== 1) return;
 
       const item = items[0];
-      const newName = window.prompt("Enter new name:", item.name);
-      const trimmedName = newName?.trim();
+      const newNameResult = await dialog.prompt({
+        title: `Rename ${item.kind}:`,
+        label: "New name:",
+        placeholder: item.name,
+        confirmLabel: "Rename",
+      });
+      const newName = newNameResult?.trim();
 
-      if (!trimmedName || trimmedName === item.name) return;
+      if (!newName || newName === item.name) return;
 
       if (item.kind === "file") {
-        toast.promise(renameFile({ fileId: item.id, newName: trimmedName }), {
+        toast.promise(renameFile({ fileId: item.id, newName: newName }), {
           success: "Renamed successfully",
           error: "Failed to rename",
           duration: 1500,
@@ -52,26 +59,30 @@ export function useExplorerItemActions({
         return;
       }
 
-      toast.promise(renameFolder({ folderId: item.id, newName: trimmedName }), {
+      toast.promise(renameFolder({ folderId: item.id, newName: newName }), {
         success: "Renamed successfully",
         error: "Failed to rename",
         duration: 1500,
       });
     },
-    [renameFile, renameFolder],
+    [dialog, renameFile, renameFolder],
   );
 
   const deleteItems = useCallback(
     async (items: ExplorerItem[]) => {
       if (items.length === 0) return;
 
-      const confirmDelete = window.confirm(
-        items.length === 1
-          ? `Delete "${items[0].name}"?`
-          : `Delete ${items.length} selected items?`,
-      );
+      const confirmResult = await dialog.confirm({
+        title: "Confirm Deletion",
+        destructive: true,
+        description:
+          items.length === 1
+            ? `Delete "${items[0].name}"?`
+            : `Delete ${items.length} selected items?`,
+        confirmLabel: "Delete",
+      });
 
-      if (!confirmDelete) return;
+      if (!confirmResult) return;
 
       toast.promise(
         Promise.all(
@@ -86,7 +97,9 @@ export function useExplorerItemActions({
         ),
         {
           success:
-            items.length === 1 ? "Deleted item" : `Deleted ${items.length} items`,
+            items.length === 1
+              ? "Deleted item"
+              : `Deleted ${items.length} items`,
           error: "Failed to delete",
           duration: 1500,
         },
@@ -97,57 +110,60 @@ export function useExplorerItemActions({
         queryKey: folderKeys.content(folderId),
       });
     },
-    [folderId, onAfterDelete, queryClient],
+    [dialog, folderId, onAfterDelete, queryClient],
   );
 
-  const downloadItems = useCallback(async (items: ExplorerItem[]) => {
-    if (items.length === 0 || isDownloading) return;
+  const downloadItems = useCallback(
+    async (items: ExplorerItem[]) => {
+      if (items.length === 0 || isDownloading) return;
 
-    setIsDownloading(true);
+      setIsDownloading(true);
 
-    try {
-      if (items.length === 1 && items[0].kind === "file") {
-        triggerDownload(getFileDownloadUrl(items[0].id));
-        toast.success("Download started");
-        return;
-      }
-
-      const toastId = toast.loading("Preparing download...");
-      const result = await createDownload(
-        items.map((item) => ({
-          kind: item.kind,
-          id: item.id,
-        })),
-      );
-
-      while (true) {
-        const job = await getDownloadJob(result.jobId);
-
-        if (job.status === "ready") {
-          toast.success("Download ready", { id: toastId });
-          triggerDownload(getArchiveDownloadUrl(result.jobId));
+      try {
+        if (items.length === 1 && items[0].kind === "file") {
+          triggerDownload(getFileDownloadUrl(items[0].id));
+          toast.success("Download started");
           return;
         }
 
-        if (job.status === "failed" || job.status === "expired") {
-          toast.error(
-            job.status === "failed" ? "Download failed" : "Download expired",
-            { id: toastId },
-          );
-          return;
-        }
-
-        toast.loading(
-          `Preparing download... ${job.progress > 0 ? `${job.progress}%` : ""}`,
-          { id: toastId },
+        const toastId = toast.loading("Preparing download...");
+        const result = await createDownload(
+          items.map((item) => ({
+            kind: item.kind,
+            id: item.id,
+          })),
         );
 
-        await sleep(1000);
+        while (true) {
+          const job = await getDownloadJob(result.jobId);
+
+          if (job.status === "ready") {
+            toast.success("Download ready", { id: toastId });
+            triggerDownload(getArchiveDownloadUrl(result.jobId));
+            return;
+          }
+
+          if (job.status === "failed" || job.status === "expired") {
+            toast.error(
+              job.status === "failed" ? "Download failed" : "Download expired",
+              { id: toastId },
+            );
+            return;
+          }
+
+          toast.loading(
+            `Preparing download... ${job.progress > 0 ? `${job.progress}%` : ""}`,
+            { id: toastId },
+          );
+
+          await sleep(1000);
+        }
+      } finally {
+        setIsDownloading(false);
       }
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [isDownloading]);
+    },
+    [isDownloading],
+  );
 
   return {
     isDownloading,

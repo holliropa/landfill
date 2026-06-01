@@ -110,7 +110,21 @@
 }
 
 .text .content {
-    color: var(--button-text-bg-hover);
+    color: var(--button-text-text);
+}
+
+.danger .background {
+    background: var(--danger-bg);
+    border-color: var(--danger-bg);
+}
+
+.danger:hover:not(:disabled) .background {
+    background: var(--danger-bg-hover);
+    border-color: var(--danger-bg-hover);
+}
+
+.danger .content {
+    color: var(--danger-text);
 }
 
 .small .content{

@@ -9,12 +9,15 @@ import "./styles/global.css";
 
 import App from "./App";
 import { ThemeProvider } from "@/lib/theme";
+import { DialogProvider } from "@/providers";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <DialogProvider>
+          <App />
+        </DialogProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,

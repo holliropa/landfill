@@ -46,6 +46,10 @@
 
     --drop-target-bg: rgb(238 240 244 / 0.86);
     --drop-target-border: rgb(79 140 255 / 0.9);
+
+    --danger-bg: #a2030d;
+    --danger-bg-hover: #87030b;
+    --danger-text: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -93,4 +97,8 @@
 
     --drop-target-bg: rgb(18 27 42 / 0.86);
     --drop-target-border: rgb(110 168 254 / 0.9);
+
+    --danger-bg: #dc2626;
+    --danger-bg-hover: #b91c1c;
+    --danger-text: #ffffff;
 }
