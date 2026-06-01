@@ -5,7 +5,7 @@ import {
   type ReactNode,
 } from "react";
 
-type ButtonVariant = "text" | "contained" | "outlined";
+type ButtonVariant = "text" | "contained" | "outlined" | "danger";
 type ButtonSize = "small" | "medium" | "large";
 
 export type ButtonProps = PropsWithChildren<

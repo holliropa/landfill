@@ -6,12 +6,14 @@ import { FolderBreadcrumbs, type BreadcrumbItem } from "./FolderBreadcrumbs";
 import { IconButton } from "@/ui/IconButton";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
 import { toast } from "sonner";
+import { useDialog } from "@/providers";
 
 export type NavigationBarProps = {
   folderId: string;
 };
 
 export function FolderNavigationBar({ folderId }: NavigationBarProps) {
+  const dialog = useDialog();
   const openFolder = useFolderNavigation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { mutateAsync: createFolder } = useCreateFolder();
@@ -26,19 +28,23 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
   const canGoBack = Boolean(folderPath && folderPath.path.length > 1);
 
   const handleCreateFolder = async () => {
-    const name = window.prompt("Enter folder name:");
-    const trimmedName = name?.trim();
+    const nameResult = await dialog.prompt({
+      title: "Create Folder",
+      label: "Folder name:",
+      confirmLabel: "Create",
+    });
+    const newFolderName = nameResult?.trim();
 
-    if (!trimmedName) return;
+    if (!newFolderName) return;
 
     toast.promise(
       createFolder({
-        name: trimmedName,
+        name: newFolderName,
         parentFolderId: folderId,
       }),
       {
-        loading: `Creating folder "${trimmedName}"...`,
-        success: `Folder "${trimmedName}" created`,
+        loading: `Creating folder "${newFolderName}"...`,
+        success: `Folder "${newFolderName}" created`,
         error: "Failed to create folder",
         duration: 1500,
       },
