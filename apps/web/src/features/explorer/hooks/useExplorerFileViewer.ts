@@ -1,5 +1,5 @@
-﻿import type { ExplorerItem } from "@/components/Explorer";
 import { useMemo, useState } from "react";
+import type { ExplorerItem } from "@/features/explorer/types";
 
 type ExplorerFileViewerParams = {
   items: ExplorerItem[];

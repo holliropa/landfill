@@ -1,4 +1,4 @@
-import type { ExplorerItem } from "@/components/Explorer";
+import type { ExplorerItem } from "@/features/explorer/types";
 import {
   createDownload,
   deleteFile,
@@ -21,7 +21,7 @@ function sleep(ms: number) {
 }
 
 type ExplorerItemActionsParams = {
-  folderId: string;
+  folderId?: string;
   onAfterDelete?: () => void;
 };
 
@@ -84,31 +84,33 @@ export function useExplorerItemActions({
 
       if (!confirmResult) return;
 
-      toast.promise(
-        Promise.all(
-          items.map(async (item) => {
-            if (item.kind === "file") {
-              await deleteFile(item.id);
-              return;
-            }
+      const deletePromise = Promise.all(
+        items.map(async (item) => {
+          if (item.kind === "file") {
+            await deleteFile(item.id);
+            return;
+          }
 
-            await deleteFolder(item.id);
-          }),
-        ),
-        {
-          success:
-            items.length === 1
-              ? "Deleted item"
-              : `Deleted ${items.length} items`,
-          error: "Failed to delete",
-          duration: 1500,
-        },
+          await deleteFolder(item.id);
+        }),
       );
 
-      onAfterDelete?.();
-      await queryClient.invalidateQueries({
-        queryKey: folderKeys.content(folderId),
+      toast.promise(deletePromise, {
+        success:
+          items.length === 1 ? "Deleted item" : `Deleted ${items.length} items`,
+        error: "Failed to delete",
+        duration: 1500,
       });
+
+      await deletePromise;
+
+      onAfterDelete?.();
+
+      if (folderId) {
+        await queryClient.invalidateQueries({
+          queryKey: folderKeys.content(folderId),
+        });
+      }
     },
     [dialog, folderId, onAfterDelete, queryClient],
   );

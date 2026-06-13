@@ -7,5 +7,9 @@ export type ExplorerItem = {
   name: string;
   createdAt: Date;
   size: number | null;
+  location?: {
+    id: string;
+    name: string;
+  };
   ThumbnailComponent: React.ReactNode;
 };

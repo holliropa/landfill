@@ -1,8 +1,8 @@
-﻿import styles from "./DetailsView.module.css";
-import type { SelectionItem } from "./types.ts";
-import { DetailsShell } from "./DetailsShell";
+import type { SelectionItem } from "@/features/explorer/state";
 import { FileIcon } from "lucide-react";
 import { DetailsRow } from "./DetailsRow";
+import { DetailsShell } from "./DetailsShell";
+import styles from "./DetailsView.module.css";
 
 export function SelectionDetails({
   selectionItems,
