@@ -1,4 +1,6 @@
-import type { ExplorerItem } from "@/components/Explorer";
+import type { ExplorerItem } from "@/features/explorer/types";
+import { IconButton } from "@/ui/IconButton";
+import { SpinnerIcon } from "@/ui/SpinnerIcon";
 import {
   DownloadIcon,
   FileEditIcon,
@@ -6,27 +8,25 @@ import {
   TrashIcon,
   XIcon,
 } from "lucide-react";
-import { IconButton } from "@/ui/IconButton";
-import { SpinnerIcon } from "@/ui/SpinnerIcon";
 
 export type ManipulationBarProps = {
   selectedItems: ExplorerItem[];
   isDownloading: boolean;
-  onDeselectAll: () => void;
+  onClearSelection: () => void;
+  onRenameItems: (items: ExplorerItem[]) => void;
+  onDownloadItems: (items: ExplorerItem[]) => void;
+  onDeleteItems: (items: ExplorerItem[]) => void;
   onShowDetails: () => void;
-  onRename: (items: ExplorerItem[]) => void;
-  onDownload: (items: ExplorerItem[]) => void;
-  onDelete: (items: ExplorerItem[]) => void;
 };
 
 export function ManipulationBar({
   selectedItems,
   isDownloading,
-  onDeselectAll,
+  onClearSelection,
+  onRenameItems,
+  onDownloadItems,
+  onDeleteItems,
   onShowDetails,
-  onRename,
-  onDownload,
-  onDelete,
 }: ManipulationBarProps) {
   return (
     <div
@@ -43,7 +43,7 @@ export function ManipulationBar({
           <IconButton
             size="medium"
             variant="ghost"
-            onClick={onDeselectAll}
+            onClick={onClearSelection}
             icon={<XIcon />}
             aria-label="Clear selection"
             title="Clear selection"
@@ -61,14 +61,14 @@ export function ManipulationBar({
         <IconButton
           variant="ghost"
           icon={<FileEditIcon />}
-          onClick={() => onRename(selectedItems)}
+          onClick={() => onRenameItems(selectedItems)}
           disabled={selectedItems.length === 0 || selectedItems.length > 1}
           aria-label="Rename selected item"
           title="Rename"
         />
         <IconButton
           variant="ghost"
-          onClick={() => onDownload(selectedItems)}
+          onClick={() => onDownloadItems(selectedItems)}
           disabled={isDownloading || selectedItems.length === 0}
           icon={isDownloading ? <SpinnerIcon /> : <DownloadIcon />}
           aria-label="Download selected items"
@@ -76,7 +76,7 @@ export function ManipulationBar({
         />
         <IconButton
           variant="ghost"
-          onClick={() => onDelete(selectedItems)}
+          onClick={() => onDeleteItems(selectedItems)}
           icon={<TrashIcon color="#a2030d" />}
           disabled={selectedItems.length === 0}
           aria-label="Delete selected items"
@@ -93,3 +93,4 @@ export function ManipulationBar({
     </div>
   );
 }
+

@@ -1,11 +1,11 @@
 import styles from "./ExplorerPage.module.css";
-import { Explorer, type ExplorerItem } from "@/components/Explorer";
 import { useParams } from "react-router-dom";
 import { useFolderContent } from "@/lib/client";
 import { useMemo } from "react";
 import { FolderIcon } from "lucide-react";
 import { FileThumbnail } from "@/components/FileThumbnail";
 import { FolderNavigationBar } from "@/components/FolderNavigationBar";
+import { Explorer, type ExplorerItem } from "@/features/explorer";
 
 export function ExplorerPage() {
   const { folderId } = useParams<{ folderId?: string }>();
@@ -48,7 +48,8 @@ export function ExplorerPage() {
       <div className={styles.content}>
         <Explorer
           items={items}
-          location={normalizedFolderId}
+          mode="folder"
+          folderId={normalizedFolderId}
           isLoading={isLoading}
           isError={isError}
         />

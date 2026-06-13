@@ -1,7 +1,19 @@
-import styles from "./ExploreList.module.css";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExplorerItem } from "../types";
+import styles from "./ExplorerList.module.css";
+import React, {
+  type Dispatch,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { ExplorerItem } from "@/features/explorer/types";
 import { AlertCircleIcon, FolderOpenIcon } from "lucide-react";
+import type {
+  ExplorerAction,
+  ExplorerSelectionMode,
+  ExplorerState,
+} from "@/features/explorer/state";
 
 type Column = {
   key: "thumbnail" | "name" | "date" | "size";
@@ -13,12 +25,9 @@ type Column = {
 
 export type ExplorerListProps = {
   items: ExplorerItem[];
-  selectedKeys: Set<string>;
-  focusedIndex: number | null;
-  onFocusedIndex: (index: number | null) => void;
-  onKeyboardActiveChange: (isActive: boolean) => void;
+  state: ExplorerState;
+  dispatch: Dispatch<ExplorerAction>;
   onItemOpen: (index: number) => void;
-  onItemClick: (index: number, event: React.MouseEvent) => void;
   onItemContextMenu: (index: number, event: React.MouseEvent) => void;
   isLoading?: boolean;
   isError?: boolean;
@@ -26,12 +35,9 @@ export type ExplorerListProps = {
 
 export function ExplorerList({
   items,
-  selectedKeys,
-  focusedIndex,
-  onFocusedIndex,
-  onKeyboardActiveChange,
+  state,
+  dispatch,
   onItemOpen,
-  onItemClick,
   onItemContextMenu,
   isLoading = false,
   isError = false,
@@ -52,7 +58,6 @@ export function ExplorerList({
   const headerRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const rowRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const onItemClickRef = useRef(onItemClick);
   const onItemOpenRef = useRef(onItemOpen);
   const onItemContextMenuRef = useRef(onItemContextMenu);
 
@@ -61,12 +66,12 @@ export function ExplorerList({
   }, [columns]);
 
   useEffect(() => {
-    onItemClickRef.current = onItemClick;
     onItemOpenRef.current = onItemOpen;
     onItemContextMenuRef.current = onItemContextMenu;
-  }, [onItemClick, onItemOpen, onItemContextMenu]);
+  }, [onItemOpen, onItemContextMenu]);
 
   useEffect(() => {
+    const focusedIndex = state.focusedIndex;
     if (focusedIndex === null) return;
     if (!bodyRef.current?.contains(document.activeElement)) return;
 
@@ -90,14 +95,14 @@ export function ExplorerList({
     if (rowRect.bottom > visibleBottom) {
       container.scrollTop += rowRect.bottom - visibleBottom;
     }
-  }, [focusedIndex]);
+  }, [state.focusedIndex]);
 
   const handleRowClick = useCallback(
     (index: number, event: React.MouseEvent) => {
       bodyRef.current?.focus();
-      onItemClickRef.current(index, event);
+      dispatch(getSelectionAction(index, getSelectionMode(event)));
     },
-    [],
+    [dispatch],
   );
 
   const handleRowOpen = useCallback((index: number) => {
@@ -181,19 +186,21 @@ export function ExplorerList({
         tabIndex={0}
         aria-label="Folder contents"
         aria-activedescendant={
-          focusedIndex === null ? undefined : `explorer-row-${focusedIndex}`
+          state.focusedIndex === null
+            ? undefined
+            : `explorer-row-${state.focusedIndex}`
         }
         aria-busy={isLoading || undefined}
         onFocusCapture={() => {
-          onKeyboardActiveChange(true);
+          dispatch({ type: "keyboard-active", active: true });
 
-          if (focusedIndex === null && items.length > 0) {
-            onFocusedIndex(0);
+          if (state.focusedIndex === null && items.length > 0) {
+            dispatch({ type: "focus", index: 0 });
           }
         }}
         onBlurCapture={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) {
-            onKeyboardActiveChange(false);
+            dispatch({ type: "keyboard-active", active: false });
           }
         }}
       >
@@ -209,11 +216,13 @@ export function ExplorerList({
           <div className={styles.messageState}>
             <FolderOpenIcon size={28} />
             <strong>This folder is empty</strong>
-            <span>Use the toolbar above to upload files or create a folder.</span>
+            <span>
+              Use the toolbar above to upload files or create a folder.
+            </span>
           </div>
         ) : (
           items.map((item, index) => {
-            const isSelected = selectedKeys.has(item.key);
+            const isSelected = state.selectedKeys.has(item.key);
 
             return (
               <ExplorerRow
@@ -221,7 +230,7 @@ export function ExplorerList({
                 item={item}
                 index={index}
                 isSelected={isSelected}
-                isFocused={index === focusedIndex}
+                isFocused={index === state.focusedIndex}
                 gridTemplateColumns={gridTemplateColumns}
                 rowRef={(element) => {
                   rowRefs.current[index] = element;
@@ -352,4 +361,25 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getSelectionMode(event: React.MouseEvent): ExplorerSelectionMode {
+  if (event.shiftKey) return "range";
+  if (event.ctrlKey || event.metaKey) return "toggle";
+  return "replace";
+}
+
+function getSelectionAction(
+  index: number,
+  mode: ExplorerSelectionMode,
+): ExplorerAction {
+  if (mode === "range") {
+    return { type: "select-range", index };
+  }
+
+  if (mode === "toggle") {
+    return { type: "toggle-select", index };
+  }
+
+  return { type: "select-one", index };
 }

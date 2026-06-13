@@ -1,17 +1,8 @@
-﻿import { EmptyDetails } from "./EmptyDetails";
+import type { DetailsTarget } from "@/features/explorer/details";
+import { EmptyDetails } from "./EmptyDetails";
 import { FileDetails } from "./FileDetails";
-import type { SelectionItem } from "./types.ts";
-import { SelectionDetails } from "./SelectionDetails";
 import { FolderDetails } from "./FolderDetails";
-
-export type DetailsTarget =
-  | { type: "none" }
-  | { type: "folder"; id: string }
-  | { type: "file"; id: string }
-  | {
-      type: "selection";
-      items: Array<SelectionItem>;
-    };
+import { SelectionDetails } from "./SelectionDetails";
 
 export type DetailsViewProps = {
   target: DetailsTarget;
@@ -34,3 +25,4 @@ export function DetailsView({ target, onClose }: DetailsViewProps) {
       return null;
   }
 }
+

@@ -1,9 +1,9 @@
 ﻿import { Navigate, useSearchParams } from "react-router-dom";
 import { useStorageSearch } from "@/lib/client";
 import { useMemo } from "react";
-import { Explorer, type ExplorerItem } from "@/components/Explorer";
 import { FolderIcon } from "lucide-react";
 import { FileThumbnail } from "@/components/FileThumbnail";
+import { Explorer, type ExplorerItem } from "@/features/explorer";
 
 export function SearchPage() {
   const [searchParams] = useSearchParams();
@@ -72,7 +72,12 @@ export function SearchPage() {
           flexDirection: "column",
         }}
       >
-        <Explorer items={items} />
+        <Explorer
+          items={items}
+          mode="search"
+          isLoading={isLoading}
+          isError={Boolean(error)}
+        />
       </div>
     </div>
   );

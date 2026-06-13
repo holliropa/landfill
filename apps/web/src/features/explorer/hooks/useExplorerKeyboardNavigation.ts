@@ -1,24 +1,23 @@
-﻿import type { ExplorerItem } from "@/components/Explorer";
-import type { Dispatch, SetStateAction } from "react";
+import type { ExplorerSelectionMode } from "@/features/explorer/state";
+import type { ExplorerItem } from "@/features/explorer/types";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut.ts";
 
 type ExplorerKeyboardNavigationParams = {
   items: ExplorerItem[];
   selectedItems: ExplorerItem[];
+  selectedCount: number;
   focusedIndex: number | null;
-  selectedKeys: Set<string>;
   lastSelectedIndex: number | null;
   enabled?: boolean;
 
-  setFocusedIndex: Dispatch<SetStateAction<number | null>>;
-  setSelectedKeys: Dispatch<SetStateAction<Set<string>>>;
-  setLastSelectedIndex: Dispatch<SetStateAction<number | null>>;
-
+  focusItem: (index: number | null) => void;
+  selectItem: (index: number, mode?: ExplorerSelectionMode) => void;
+  selectAll: () => void;
   resetSelection: () => void;
   openItem: (index: number) => void;
-  renameItems: (items: ExplorerItem[]) => void;
-  deleteItems: (items: ExplorerItem[]) => void;
-  downloadItems: (items: ExplorerItem[]) => void;
+  renameSelected: () => void;
+  deleteSelected: () => void;
+  downloadSelected: () => void;
 };
 
 function clampIndex(index: number, itemsLength: number) {
@@ -33,53 +32,60 @@ function getActiveIndex(focusedIndex: number | null, itemsLength: number) {
   return focusedIndex === null ? 0 : clampIndex(focusedIndex, itemsLength);
 }
 
-function selectRange(items: ExplorerItem[], from: number, to: number) {
-  const selectedKeys = new Set<string>();
-  const start = Math.min(from, to);
-  const end = Math.max(from, to);
-
-  for (let index = start; index <= end; index++) {
-    selectedKeys.add(items[index].key);
-  }
-
-  return selectedKeys;
-}
-
 export function useExplorerKeyboardNavigation({
   items,
   selectedItems,
+  selectedCount,
   focusedIndex,
-  selectedKeys,
   lastSelectedIndex,
   enabled = true,
-  setFocusedIndex,
-  setSelectedKeys,
-  setLastSelectedIndex,
+  focusItem,
+  selectItem,
+  selectAll,
   resetSelection,
   openItem,
-  renameItems,
-  deleteItems,
-  downloadItems,
+  renameSelected,
+  deleteSelected,
+  downloadSelected,
 }: ExplorerKeyboardNavigationParams) {
   const hasItems = items.length > 0;
-  const singleItem = selectedKeys.size == 1;
+  const singleItem = selectedCount === 1;
 
   const moveFocus = (offset: number, extendSelection: boolean) => {
     const activeIndex = getActiveIndex(focusedIndex, items.length);
     if (activeIndex === null) return;
 
     const nextIndex = clampIndex(activeIndex + offset, items.length);
-    setFocusedIndex(nextIndex);
+    focusItem(nextIndex);
 
     if (extendSelection) {
-      const rangeStart = lastSelectedIndex ?? activeIndex;
-      setSelectedKeys(selectRange(items, rangeStart, nextIndex));
+      if (lastSelectedIndex === null) {
+        selectItem(activeIndex);
+      }
+
+      selectItem(nextIndex, "range");
       return;
-    } else {
-      setSelectedKeys(new Set([items[nextIndex].key]));
     }
 
-    setLastSelectedIndex(nextIndex);
+    selectItem(nextIndex);
+  };
+
+  const moveToEdge = (index: number, extendSelection: boolean) => {
+    const activeIndex = getActiveIndex(focusedIndex, items.length);
+    if (activeIndex === null) return;
+
+    focusItem(index);
+
+    if (extendSelection) {
+      if (lastSelectedIndex === null) {
+        selectItem(activeIndex);
+      }
+
+      selectItem(index, "range");
+      return;
+    }
+
+    selectItem(index);
   };
 
   useKeyboardShortcut(
@@ -105,18 +111,7 @@ export function useExplorerKeyboardNavigation({
   useKeyboardShortcut(
     "Home",
     (event) => {
-      const activeIndex = getActiveIndex(focusedIndex, items.length);
-      if (activeIndex === null) return;
-
-      setFocusedIndex(0);
-
-      if (event.shiftKey) {
-        setSelectedKeys(
-          selectRange(items, lastSelectedIndex ?? activeIndex, 0),
-        );
-      } else {
-        setLastSelectedIndex(0);
-      }
+      moveToEdge(0, event.shiftKey);
     },
     {
       enabled: enabled && hasItems,
@@ -126,19 +121,7 @@ export function useExplorerKeyboardNavigation({
   useKeyboardShortcut(
     "End",
     (event) => {
-      const activeIndex = getActiveIndex(focusedIndex, items.length);
-      if (activeIndex === null) return;
-
-      const lastIndex = items.length - 1;
-      setFocusedIndex(lastIndex);
-
-      if (event.shiftKey) {
-        setSelectedKeys(
-          selectRange(items, lastSelectedIndex ?? activeIndex, lastIndex),
-        );
-      } else {
-        setLastSelectedIndex(lastIndex);
-      }
+      moveToEdge(items.length - 1, event.shiftKey);
     },
     { enabled: enabled && hasItems },
   );
@@ -160,21 +143,7 @@ export function useExplorerKeyboardNavigation({
       const activeIndex = getActiveIndex(focusedIndex, items.length);
       if (activeIndex === null) return;
 
-      const item = items[activeIndex];
-
-      setSelectedKeys((previousSelectedKeys) => {
-        const nextSelectedKeys = new Set(previousSelectedKeys);
-
-        if (nextSelectedKeys.has(item.key)) {
-          nextSelectedKeys.delete(item.key);
-        } else {
-          nextSelectedKeys.add(item.key);
-        }
-
-        return nextSelectedKeys;
-      });
-
-      setLastSelectedIndex(activeIndex);
+      selectItem(activeIndex, "toggle");
     },
     {
       enabled: enabled && hasItems,
@@ -184,8 +153,7 @@ export function useExplorerKeyboardNavigation({
   useKeyboardShortcut(
     "a",
     () => {
-      setSelectedKeys(new Set(items.map((item) => item.key)));
-      setLastSelectedIndex(focusedIndex);
+      selectAll();
     },
     {
       ctrlKey: true,
@@ -199,14 +167,14 @@ export function useExplorerKeyboardNavigation({
       resetSelection();
     },
     {
-      enabled: enabled && selectedKeys.size > 0,
+      enabled: enabled && selectedCount > 0,
     },
   );
 
   useKeyboardShortcut(
     "F2",
     () => {
-      renameItems(selectedItems);
+      renameSelected();
     },
     {
       enabled: enabled && selectedItems.length === 1,
@@ -216,7 +184,7 @@ export function useExplorerKeyboardNavigation({
   useKeyboardShortcut(
     "Delete",
     () => {
-      deleteItems(selectedItems);
+      deleteSelected();
     },
     {
       enabled: enabled && selectedItems.length > 0,
@@ -226,7 +194,7 @@ export function useExplorerKeyboardNavigation({
   useKeyboardShortcut(
     "d",
     () => {
-      downloadItems(selectedItems);
+      downloadSelected();
     },
     {
       ctrlKey: true,
