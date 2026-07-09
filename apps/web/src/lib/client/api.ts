@@ -1,5 +1,5 @@
 import type { FileItem, FolderItem } from "@/types";
-import type { StorageItem } from "./types";
+import type { StorageItem, TrashItem } from "./types";
 import config from "@/config";
 
 export async function createFolder(
@@ -256,4 +256,59 @@ export function getFileRawUrl(fileId: string) {
 
 export function getFileThumbnailUrl(fileId: string) {
   return `${config.api.url}/files/${fileId}/thumbnail`;
+}
+
+export type TrashContentResponse = {
+  items: TrashItem[];
+};
+
+export async function getTrashContent(): Promise<TrashContentResponse> {
+  const response = await fetch(`${config.api.url}/trash`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch trash");
+  }
+
+  return response.json();
+}
+
+export async function restoreTrashItem(
+  kind: "file" | "folder",
+  id: string,
+): Promise<void> {
+  const resource = kind === "file" ? "files" : "folders";
+  const response = await fetch(
+    `${config.api.url}/trash/${resource}/${id}/restore`,
+    {
+      method: "POST",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to restore item");
+  }
+}
+
+export async function permanentlyDeleteTrashItem(
+  kind: "file" | "folder",
+  id: string,
+): Promise<void> {
+  const resource = kind === "file" ? "files" : "folders";
+  const response = await fetch(`${config.api.url}/trash/${resource}/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to permanently delete item");
+  }
+}
+
+export async function emptyTrash(): Promise<void> {
+  const response = await fetch(`${config.api.url}/trash`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to empty trash");
+  }
 }

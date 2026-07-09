@@ -1,12 +1,17 @@
-﻿import db, { downloadJobs } from "@/lib/db";
+import db, {
+  downloadJobs,
+  files as dbFiles,
+  folders as dbFolders,
+} from "@/lib/db";
 import path from "path";
 import config from "@/config";
 import fs from "fs";
 import archiver from "archiver";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getFilePath } from "./get-file-path";
 import { getFile } from "./get-file";
 import { getFolder } from "./get-folder";
+import { isFileInActiveTree } from "./trash-visibility";
 
 type DownloadItem = {
   kind: "file" | "folder";
@@ -102,6 +107,7 @@ async function collectEntries(items: DownloadItem[]) {
       const fileResult = await getFile(item.id);
 
       if (!fileResult.success) continue;
+      if (!(await isFileInActiveTree(fileResult.data))) continue;
 
       archiveEntries.push({
         filePath: getFilePath(fileResult.data.diskName),
@@ -128,21 +134,31 @@ async function collectFolderEntries(
     ? `${basePath}/${folderResult.data.name}`
     : folderResult.data.name;
 
-  const files = await db.query.files.findMany({
-    where: { folderId: folderResult.data.id },
-    columns: {
-      originalName: true,
-      diskName: true,
-    },
-  });
+  const files = await db
+    .select({
+      originalName: dbFiles.originalName,
+      diskName: dbFiles.diskName,
+    })
+    .from(dbFiles)
+    .where(
+      and(
+        eq(dbFiles.folderId, folderResult.data.id),
+        isNull(dbFiles.deletedAt),
+      ),
+    );
 
-  const childFolders = await db.query.folders.findMany({
-    where: { parentFolderId: folderResult.data.id },
-    columns: {
-      id: true,
-      name: true,
-    },
-  });
+  const childFolders = await db
+    .select({
+      id: dbFolders.id,
+      name: dbFolders.name,
+    })
+    .from(dbFolders)
+    .where(
+      and(
+        eq(dbFolders.parentFolderId, folderResult.data.id),
+        isNull(dbFolders.deletedAt),
+      ),
+    );
 
   const archiveEntries: ArchiveEntry[] = [];
 

@@ -9,6 +9,10 @@ type ExplorerKeyboardNavigationParams = {
   focusedIndex: number | null;
   lastSelectedIndex: number | null;
   enabled?: boolean;
+  canOpenItems?: boolean;
+  canRename?: boolean;
+  canDelete?: boolean;
+  canDownload?: boolean;
 
   focusItem: (index: number | null) => void;
   selectItem: (index: number, mode?: ExplorerSelectionMode) => void;
@@ -39,6 +43,10 @@ export function useExplorerKeyboardNavigation({
   focusedIndex,
   lastSelectedIndex,
   enabled = true,
+  canOpenItems = true,
+  canRename = true,
+  canDelete = true,
+  canDownload = true,
   focusItem,
   selectItem,
   selectAll,
@@ -134,7 +142,7 @@ export function useExplorerKeyboardNavigation({
 
       openItem(activeIndex);
     },
-    { enabled: enabled && singleItem },
+    { enabled: enabled && canOpenItems && singleItem },
   );
 
   useKeyboardShortcut(
@@ -177,7 +185,7 @@ export function useExplorerKeyboardNavigation({
       renameSelected();
     },
     {
-      enabled: enabled && selectedItems.length === 1,
+      enabled: enabled && canRename && selectedItems.length === 1,
     },
   );
 
@@ -187,7 +195,7 @@ export function useExplorerKeyboardNavigation({
       deleteSelected();
     },
     {
-      enabled: enabled && selectedItems.length > 0,
+      enabled: enabled && canDelete && selectedItems.length > 0,
     },
   );
 
@@ -198,7 +206,7 @@ export function useExplorerKeyboardNavigation({
     },
     {
       ctrlKey: true,
-      enabled: enabled && selectedItems.length > 0,
+      enabled: enabled && canDownload && selectedItems.length > 0,
     },
   );
 }

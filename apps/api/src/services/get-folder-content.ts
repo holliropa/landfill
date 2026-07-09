@@ -1,5 +1,6 @@
-﻿import db, { files, folders } from "@/lib/db";
-import { eq, isNull } from "drizzle-orm";
+import db, { files, folders } from "@/lib/db";
+import { and, eq, isNull } from "drizzle-orm";
+import { isFolderInActiveTree } from "./trash-visibility";
 
 export type GetFolderContentResult =
   | {
@@ -26,6 +27,10 @@ export async function getFolderContent(
   folderId: string | null,
 ): Promise<GetFolderContentResult> {
   try {
+    if (folderId !== null && !(await isFolderInActiveTree(folderId))) {
+      return { success: false, code: "FOLDER_NOT_FOUND" };
+    }
+
     const foldersResult = await db
       .select({
         id: folders.id,
@@ -35,9 +40,12 @@ export async function getFolderContent(
       })
       .from(folders)
       .where(
-        folderId === null
-          ? isNull(folders.parentFolderId)
-          : eq(folders.parentFolderId, folderId),
+        and(
+          folderId === null
+            ? isNull(folders.parentFolderId)
+            : eq(folders.parentFolderId, folderId),
+          isNull(folders.deletedAt),
+        ),
       );
 
     const filesResult = await db
@@ -50,9 +58,12 @@ export async function getFolderContent(
       })
       .from(files)
       .where(
-        folderId === null
-          ? isNull(files.folderId)
-          : eq(files.folderId, folderId),
+        and(
+          folderId === null
+            ? isNull(files.folderId)
+            : eq(files.folderId, folderId),
+          isNull(files.deletedAt),
+        ),
       );
 
     return {
@@ -69,6 +80,7 @@ export async function getFolderContent(
       },
     };
   } catch (error) {
+    console.error("Error getting folder content:", error);
     return { success: false, code: "DATABASE_ERROR" };
   }
 }

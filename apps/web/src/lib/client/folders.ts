@@ -8,6 +8,7 @@ import {
   renameFolder,
 } from "./api.ts";
 import { folderKeys } from "./keys";
+import { useInvalidateStorageQueries } from "./invalidation";
 
 export function useFolderContent(folderId: string) {
   return useQuery({
@@ -45,6 +46,7 @@ export function useCreateFolder() {
 
 export function useRenameFolder() {
   const queryClient = useQueryClient();
+  const invalidateStorageQueries = useInvalidateStorageQueries();
 
   return useMutation({
     mutationFn: ({
@@ -57,9 +59,13 @@ export function useRenameFolder() {
       return renameFolder(folderId, newName);
     },
     onSuccess: async (_data) => {
-      await queryClient.invalidateQueries({
-        queryKey: folderKeys.content(_data.parentFolderId ?? "root"),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: folderKeys.content(_data.parentFolderId ?? "root"),
+        }),
+        queryClient.invalidateQueries({ queryKey: folderKeys.byId(_data.id) }),
+        invalidateStorageQueries(),
+      ]);
     },
   });
 }

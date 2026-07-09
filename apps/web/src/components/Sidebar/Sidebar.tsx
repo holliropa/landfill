@@ -9,10 +9,13 @@ import {
 } from "lucide-react";
 import { SidebarItem } from "./SidebarItem";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
+import { useNavigate } from "react-router-dom";
+import { paths } from "@/router";
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const openFolder = useFolderNavigation();
+  const navigate = useNavigate();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -33,7 +36,7 @@ export function Sidebar() {
           label="All Files"
         />
         <SidebarItem
-          onClick={() => {}}
+          onClick={() => navigate(paths.trashPath())}
           isOpen={isOpen}
           Icon={<Trash size={22} />}
           label="Trash"

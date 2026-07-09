@@ -9,6 +9,10 @@ type ExplorerKeyboardControllerProps = {
   selectedItems: ExplorerItem[];
   state: ExplorerState;
   dispatch: Dispatch<ExplorerAction>;
+  canOpenItems: boolean;
+  canRename: boolean;
+  canDelete: boolean;
+  canDownload: boolean;
   onOpenItem: (index: number) => void;
   onRenameSelected: () => void;
   onDeleteSelected: () => void;
@@ -21,6 +25,10 @@ export function ExplorerKeyboardController({
   selectedItems,
   state,
   dispatch,
+  canOpenItems,
+  canRename,
+  canDelete,
+  canDownload,
   onOpenItem,
   onRenameSelected,
   onDeleteSelected,
@@ -28,6 +36,10 @@ export function ExplorerKeyboardController({
 }: ExplorerKeyboardControllerProps) {
   useExplorerKeyboardNavigation({
     enabled,
+    canOpenItems,
+    canRename,
+    canDelete,
+    canDownload,
     items,
     selectedItems,
     selectedCount: selectedItems.length,
@@ -55,4 +67,3 @@ export function ExplorerKeyboardController({
 
   return null;
 }
-

@@ -4,7 +4,6 @@
   integer,
   sqliteTable,
   text,
-
 } from "drizzle-orm/sqlite-core";
 import { randomUUID } from "crypto";
 import { sql } from "drizzle-orm";
@@ -28,8 +27,16 @@ export const folders = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
+
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   },
-  (table) => [index("folders_parent_folder_id_idx").on(table.parentFolderId)],
+  (table) => [
+    index("folders_parent_folder_id_idx").on(table.parentFolderId),
+    index("folders_parent_folder_id_deleted_at_idx").on(
+      table.parentFolderId,
+      table.deletedAt,
+    ),
+  ],
 );
 
 export const files = sqliteTable(
@@ -48,11 +55,14 @@ export const files = sqliteTable(
       onDelete: "cascade",
     }),
 
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
   },
   (table) => [
     index("files_folder_id_idx").on(table.folderId),
+    index("files_folder_id_deleted_at_idx").on(table.folderId, table.deletedAt),
   ],
 );

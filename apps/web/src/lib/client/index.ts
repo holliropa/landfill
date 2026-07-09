@@ -4,3 +4,5 @@ export * from "./types";
 export * from "./folders";
 export * from "./files";
 export * from "./storage";
+export * from "./trash";
+export * from "./invalidation";

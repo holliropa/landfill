@@ -1,4 +1,5 @@
-﻿import db from "@/lib/db";
+import db from "@/lib/db";
+import { hasTrashedAncestor } from "./trash-visibility";
 
 export type FindFoldersByNameResult =
   | {
@@ -32,7 +33,31 @@ export async function findFoldersByName(
       },
     });
 
-    return { success: true, data: matchResult };
+    const activeMatches: {
+      id: string;
+      name: string;
+      createdAt: Date;
+      parentFolder: { id: string; name: string } | null;
+    }[] = [];
+
+    for (const folder of matchResult) {
+      if (
+        folder.deletedAt !== null ||
+        (await hasTrashedAncestor(folder.parentFolderId))
+      ) {
+        continue;
+      }
+
+      const { deletedAt, parentFolderId, parentFolder, ...folderData } = folder;
+      activeMatches.push({
+        ...folderData,
+        parentFolder: parentFolder
+          ? { id: parentFolder.id, name: parentFolder.name }
+          : null,
+      });
+    }
+
+    return { success: true, data: activeMatches };
   } catch (error) {
     console.error("Error finding folders by name:", error);
     return { success: false, code: "DATABASE_ERROR" };

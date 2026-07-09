@@ -1,5 +1,6 @@
-﻿import db, { folders } from "@/lib/db";
+import db, { folders } from "@/lib/db";
 import { and, eq, isNull, ne } from "drizzle-orm";
+import { hasTrashedAncestor } from "./trash-visibility";
 
 export type RenameFolderResult =
   | {
@@ -27,15 +28,16 @@ export async function renameFolder(
   }
 
   try {
-    const folder = await db.query.folders.findFirst({
-      where: { id },
-      columns: {
-        id: true,
-        parentFolderId: true,
-      },
-    });
+    const [folder] = await db
+      .select({
+        id: folders.id,
+        parentFolderId: folders.parentFolderId,
+      })
+      .from(folders)
+      .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
+      .limit(1);
 
-    if (!folder) {
+    if (!folder || (await hasTrashedAncestor(folder.parentFolderId))) {
       return { success: false, code: "NOT_FOUND" };
     }
 
@@ -47,6 +49,7 @@ export async function renameFolder(
         folder.parentFolderId === null
           ? isNull(folders.parentFolderId)
           : eq(folders.parentFolderId, folder.parentFolderId),
+        isNull(folders.deletedAt),
       ),
     );
 
@@ -57,7 +60,7 @@ export async function renameFolder(
     const [updatedFolder] = await db
       .update(folders)
       .set({ name: normalizedName })
-      .where(eq(folders.id, folder.id))
+      .where(and(eq(folders.id, folder.id), isNull(folders.deletedAt)))
       .limit(1)
       .returning();
 
@@ -67,7 +70,7 @@ export async function renameFolder(
 
     return { success: true, data: updatedFolder };
   } catch (error) {
-    console.error("Error renaming file:", error);
+    console.error("Error renaming folder:", error);
     return { success: false, code: "DATABASE_ERROR" };
   }
 }

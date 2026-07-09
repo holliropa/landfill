@@ -21,6 +21,8 @@ export async function createDownloadJobHandler(req: Request, res: Response) {
     switch (createJobResult.code) {
       case "NO_ITEMS_PROVIDED":
         return res.status(400).json({ message: "No items provided" });
+      case "ITEM_NOT_FOUND":
+        return res.status(404).json({ message: "Download item not found" });
       case "DATABASE_ERROR":
       default:
         return res.status(500).json({ message: "Unknown error" });

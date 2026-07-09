@@ -4,6 +4,7 @@ import fileRoutes from "@/routes/file.routes";
 import folderRoutes from "@/routes/folder.routes";
 import downloadRoutes from "@/routes/download.routes";
 import storageRoutes from "@/routes/storage.routes";
+import trashRoutes from "@/routes/trash.routes";
 import config from "@/config";
 import "@/lib/db";
 import { cleanupExpiredJobs } from "@/services";
@@ -19,6 +20,7 @@ app.use("/api/files", fileRoutes);
 app.use("/api/folders", folderRoutes);
 app.use("/api/downloads", downloadRoutes);
 app.use("/api/storage", storageRoutes);
+app.use("/api/trash", trashRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "ok" });
