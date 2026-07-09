@@ -6,32 +6,33 @@ import {
   getArchiveDownloadUrl,
   getDownloadJob,
   getFileDownloadUrl,
+  permanentlyDeleteTrashItem,
+  restoreTrashItem,
   useRenameFile,
   useRenameFolder,
 } from "@/lib/client";
-import { folderKeys } from "@/lib/client/keys";
 import { triggerDownload } from "@/utils";
-import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDialog } from "@/providers";
+import { useInvalidateStorageQueries } from "@/lib/client";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 type ExplorerItemActionsParams = {
-  folderId?: string;
-  onAfterDelete?: () => void;
+  onAfterItemsChanged?: () => void;
 };
 
 export function useExplorerItemActions({
-  folderId,
-  onAfterDelete,
+  onAfterItemsChanged,
 }: ExplorerItemActionsParams) {
   const dialog = useDialog();
   const [isDownloading, setIsDownloading] = useState(false);
-  const queryClient = useQueryClient();
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
+  const invalidateStorageQueries = useInvalidateStorageQueries();
   const { mutateAsync: renameFile } = useRenameFile();
   const { mutateAsync: renameFolder } = useRenameFolder();
 
@@ -73,13 +74,13 @@ export function useExplorerItemActions({
       if (items.length === 0) return;
 
       const confirmResult = await dialog.confirm({
-        title: "Confirm Deletion",
+        title: "Move to trash?",
         destructive: true,
         description:
           items.length === 1
-            ? `Delete "${items[0].name}"?`
-            : `Delete ${items.length} selected items?`,
-        confirmLabel: "Delete",
+            ? `Move "${items[0].name}" to trash?`
+            : `Move ${items.length} selected items to trash?`,
+        confirmLabel: "Move to trash",
       });
 
       if (!confirmResult) return;
@@ -97,22 +98,105 @@ export function useExplorerItemActions({
 
       toast.promise(deletePromise, {
         success:
-          items.length === 1 ? "Deleted item" : `Deleted ${items.length} items`,
-        error: "Failed to delete",
+          items.length === 1
+            ? "Moved item to trash"
+            : `Moved ${items.length} items to trash`,
+        error: "Failed to move to trash",
         duration: 1500,
       });
 
       await deletePromise;
 
-      onAfterDelete?.();
+      onAfterItemsChanged?.();
 
-      if (folderId) {
-        await queryClient.invalidateQueries({
-          queryKey: folderKeys.content(folderId),
+      await invalidateStorageQueries();
+    },
+    [dialog, invalidateStorageQueries, onAfterItemsChanged],
+  );
+
+  const restoreItems = useCallback(
+    async (items: ExplorerItem[]) => {
+      if (items.length === 0 || isRestoring) return;
+
+      setIsRestoring(true);
+
+      const restorePromise = Promise.all(
+        items.map((item) => restoreTrashItem(item.kind, item.id)),
+      );
+
+      try {
+        toast.promise(restorePromise, {
+          loading:
+            items.length === 1
+              ? `Restoring "${items[0].name}"`
+              : `Restoring ${items.length} items`,
+          success:
+            items.length === 1
+              ? "Restored item"
+              : `Restored ${items.length} items`,
+          error: "Failed to restore",
+          duration: 1500,
         });
+
+        await restorePromise;
+        await invalidateStorageQueries();
+        onAfterItemsChanged?.();
+      } finally {
+        setIsRestoring(false);
       }
     },
-    [dialog, folderId, onAfterDelete, queryClient],
+    [invalidateStorageQueries, isRestoring, onAfterItemsChanged],
+  );
+
+  const permanentlyDeleteItems = useCallback(
+    async (items: ExplorerItem[]) => {
+      if (items.length === 0 || isPermanentlyDeleting) return;
+
+      const confirmResult = await dialog.confirm({
+        title: "Delete permanently?",
+        destructive: true,
+        description:
+          items.length === 1
+            ? `Permanently delete "${items[0].name}"? This cannot be undone.`
+            : `Permanently delete ${items.length} selected items? This cannot be undone.`,
+        confirmLabel: "Delete permanently",
+      });
+
+      if (!confirmResult) return;
+
+      setIsPermanentlyDeleting(true);
+
+      const deletePromise = Promise.all(
+        items.map((item) => permanentlyDeleteTrashItem(item.kind, item.id)),
+      );
+
+      try {
+        toast.promise(deletePromise, {
+          loading:
+            items.length === 1
+              ? `Deleting "${items[0].name}"`
+              : `Deleting ${items.length} items`,
+          success:
+            items.length === 1
+              ? "Permanently deleted item"
+              : `Permanently deleted ${items.length} items`,
+          error: "Failed to permanently delete",
+          duration: 1500,
+        });
+
+        await deletePromise;
+        await invalidateStorageQueries();
+        onAfterItemsChanged?.();
+      } finally {
+        setIsPermanentlyDeleting(false);
+      }
+    },
+    [
+      dialog,
+      invalidateStorageQueries,
+      isPermanentlyDeleting,
+      onAfterItemsChanged,
+    ],
   );
 
   const downloadItems = useCallback(
@@ -169,8 +253,12 @@ export function useExplorerItemActions({
 
   return {
     isDownloading,
+    isRestoring,
+    isPermanentlyDeleting,
     renameItems,
     deleteItems,
+    restoreItems,
+    permanentlyDeleteItems,
     downloadItems,
   };
 }

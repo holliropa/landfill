@@ -1,11 +1,10 @@
 ﻿import { Request, Response } from "express";
 import {
   createFolder,
-  deleteFolder,
-  deleteFromDisk,
   getFolder,
   getFolderContent,
   getFolderPath,
+  moveFolderToTrash,
   renameFolder,
 } from "@/services";
 
@@ -146,19 +145,19 @@ export async function deleteFolderHandler(req: Request, res: Response) {
     return res.status(400).json({ error: "Cannot delete root folder" });
   }
 
-  const result = await deleteFolder(id);
+  const result = await moveFolderToTrash(id);
 
   if (!result.success) {
     switch (result.code) {
       case "FOLDER_NOT_FOUND":
         return res.status(404).json({ error: "Folder not found" });
+      case "FOLDER_IN_TRASH":
+        return res.status(409).json({ error: "Folder is already in trash" });
       case "DATABASE_ERROR":
       default:
         return res.status(500).json({ error: "Failed to delete folder" });
     }
   }
 
-  result.data.affectedFiles.forEach(({ diskName }) => deleteFromDisk(diskName));
-
-  return res.status(204).end();
+  return res.status(200).json(result.data);
 }

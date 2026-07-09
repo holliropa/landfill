@@ -2,6 +2,7 @@
 import { MainLayout } from "@/layouts";
 import { ExplorerPage } from "@/pages/ExplorerPage";
 import { SearchPage } from "@/pages/SearchPage";
+import { TrashPage } from "@/pages/TrashPage";
 import { paths } from "./paths";
 
 export const router = createBrowserRouter([
@@ -24,6 +25,10 @@ export const router = createBrowserRouter([
       {
         path: "search",
         element: <SearchPage />,
+      },
+      {
+        path: "trash",
+        element: <TrashPage />,
       },
     ],
   },

@@ -8,21 +8,18 @@ import { useExplorerItemActions } from "./useExplorerItemActions";
 type ExplorerCommandsParams = {
   items: ExplorerItem[];
   selectedItems: ExplorerItem[];
-  folderId?: string;
   dispatch: Dispatch<ExplorerAction>;
 };
 
 export function useExplorerCommands({
   items,
   selectedItems,
-  folderId,
   dispatch,
 }: ExplorerCommandsParams) {
   const openFolder = useFolderNavigation();
   const fileViewer = useExplorerFileViewer({ items });
   const itemActions = useExplorerItemActions({
-    folderId,
-    onAfterDelete: () => dispatch({ type: "clear-selection" }),
+    onAfterItemsChanged: () => dispatch({ type: "clear-selection" }),
   });
 
   const openItem = useCallback(
@@ -53,15 +50,29 @@ export function useExplorerCommands({
     void itemActions.downloadItems(selectedItems);
   }, [itemActions, selectedItems]);
 
+  const restoreSelected = useCallback(() => {
+    void itemActions.restoreItems(selectedItems);
+  }, [itemActions, selectedItems]);
+
+  const permanentlyDeleteSelected = useCallback(() => {
+    void itemActions.permanentlyDeleteItems(selectedItems);
+  }, [itemActions, selectedItems]);
+
   return {
     fileViewer,
     isDownloading: itemActions.isDownloading,
+    isRestoring: itemActions.isRestoring,
+    isPermanentlyDeleting: itemActions.isPermanentlyDeleting,
     openItem,
     renameItems: itemActions.renameItems,
     deleteItems: itemActions.deleteItems,
+    restoreItems: itemActions.restoreItems,
+    permanentlyDeleteItems: itemActions.permanentlyDeleteItems,
     downloadItems: itemActions.downloadItems,
     renameSelected,
     deleteSelected,
     downloadSelected,
+    restoreSelected,
+    permanentlyDeleteSelected,
   };
 }

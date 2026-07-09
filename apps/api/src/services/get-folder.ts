@@ -1,4 +1,5 @@
-﻿import db from "@/lib/db";
+import db from "@/lib/db";
+import { hasTrashedAncestor } from "./trash-visibility";
 
 export type GetFolderData = {
   id: string;
@@ -33,6 +34,8 @@ export async function getFolder(id: string): Promise<GetFolderResult> {
         id: true,
         name: true,
         createdAt: true,
+        parentFolderId: true,
+        deletedAt: true,
       },
       where: { id },
       with: {
@@ -45,11 +48,25 @@ export async function getFolder(id: string): Promise<GetFolderResult> {
       },
     });
 
-    if (!folder) {
+    if (
+      !folder ||
+      folder.deletedAt !== null ||
+      (await hasTrashedAncestor(folder.parentFolderId))
+    ) {
       return { success: false, code: "NOT_FOUND" };
     }
 
-    return { success: true, data: folder };
+    const { deletedAt, parentFolderId, parentFolder, ...folderData } = folder;
+
+    return {
+      success: true,
+      data: {
+        ...folderData,
+        parentFolder: parentFolder
+          ? { id: parentFolder.id, name: parentFolder.name }
+          : null,
+      },
+    };
   } catch (error) {
     console.error("Error getting folder:", error);
     return { success: false, code: "DATABASE_ERROR" };

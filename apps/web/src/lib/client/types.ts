@@ -10,3 +10,7 @@ export type StorageItem = {
     name: string;
   };
 };
+
+export type TrashItem = StorageItem & {
+  deletedAt: Date;
+};

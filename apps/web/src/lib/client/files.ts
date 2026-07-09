@@ -6,6 +6,7 @@ import {
   uploadFiles,
 } from "@/lib/client/api.ts";
 import { fileKeys, folderKeys } from "@/lib/client/keys.ts";
+import { useInvalidateStorageQueries } from "./invalidation";
 
 export function useUploadFiles() {
   const queryClient = useQueryClient();
@@ -28,14 +29,19 @@ export function useUploadFiles() {
 
 export function useRenameFile() {
   const queryClient = useQueryClient();
+  const invalidateStorageQueries = useInvalidateStorageQueries();
 
   return useMutation({
     mutationFn: ({ fileId, newName }: { fileId: string; newName: string }) =>
       renameFile(fileId, newName),
     onSuccess: async (_data) => {
-      await queryClient.invalidateQueries({
-        queryKey: folderKeys.content(_data.folderId ?? "root"),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: folderKeys.content(_data.folderId ?? "root"),
+        }),
+        queryClient.invalidateQueries({ queryKey: fileKeys.byId(_data.id) }),
+        invalidateStorageQueries(),
+      ]);
     },
   });
 }

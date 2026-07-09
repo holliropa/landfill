@@ -5,10 +5,10 @@ import {
   cleanupFiles,
   createFiles,
   deleteFile,
-  deleteFromDisk,
   getFile,
   getFilePath,
   isImage,
+  isFileInActiveTree,
   renameFile,
 } from "@/services";
 
@@ -59,15 +59,15 @@ export async function deleteFileHandler(req: Request, res: Response) {
     switch (result.code) {
       case "FILE_NOT_FOUND":
         return res.status(404).json({ error: "File not found" });
+      case "FILE_IN_TRASH":
+        return res.status(409).json({ error: "File is in trash" });
       case "DATABASE_ERROR":
       default:
         return res.status(500).json({ error: "Internal server error" });
     }
   }
 
-  deleteFromDisk(result.data.diskName);
-
-  return res.status(204).end();
+  return res.status(200).json(result.data);
 }
 
 export async function downloadFileHandler(req: Request, res: Response) {
@@ -91,10 +91,11 @@ export async function downloadFileHandler(req: Request, res: Response) {
 
   const fileData = result.data;
 
-  return res.download(
-    getFilePath(fileData.diskName),
-    fileData.originalName,
-  );
+  if (!(await isFileInActiveTree(fileData))) {
+    return res.status(404).json({ error: "File not found" });
+  }
+
+  return res.download(getFilePath(fileData.diskName), fileData.originalName);
 }
 
 export async function getFileThumbnailHandler(req: Request, res: Response) {
@@ -161,6 +162,10 @@ export async function getFileByIdHandler(req: Request, res: Response) {
 
   const fileData = result.data;
 
+  if (!(await isFileInActiveTree(fileData))) {
+    return res.status(404).json({ error: "File not found" });
+  }
+
   return res.status(200).json({
     id: fileData.id,
     name: fileData.originalName,
@@ -223,6 +228,11 @@ export async function streamRawFileHandler(req: Request, res: Response) {
   }
 
   const fileData = result.data;
+
+  if (!(await isFileInActiveTree(fileData))) {
+    return res.status(404).json({ error: "File not found" });
+  }
+
   const filePath = getFilePath(fileData.diskName);
 
   try {

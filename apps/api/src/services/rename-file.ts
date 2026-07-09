@@ -1,5 +1,6 @@
 import db, { files } from "@/lib/db";
 import { and, eq, isNull, ne } from "drizzle-orm";
+import { hasTrashedAncestor } from "./trash-visibility";
 
 export type RenameFileResult =
   | {
@@ -34,15 +35,16 @@ export async function renameFile(
   }
 
   try {
-    const currentFile = await db.query.files.findFirst({
-      where: { id: fileId },
-      columns: {
-        id: true,
-        folderId: true,
-      },
-    });
+    const [currentFile] = await db
+      .select({
+        id: files.id,
+        folderId: files.folderId,
+      })
+      .from(files)
+      .where(and(eq(files.id, fileId), isNull(files.deletedAt)))
+      .limit(1);
 
-    if (!currentFile) {
+    if (!currentFile || (await hasTrashedAncestor(currentFile.folderId))) {
       return { success: false, code: "FILE_NOT_FOUND" };
     }
 
@@ -54,6 +56,7 @@ export async function renameFile(
         currentFile.folderId === null
           ? isNull(files.folderId)
           : eq(files.folderId, currentFile.folderId),
+        isNull(files.deletedAt),
       ),
     );
 
@@ -64,7 +67,7 @@ export async function renameFile(
     const [updatedFile] = await db
       .update(files)
       .set({ originalName: normalizedName })
-      .where(eq(files.id, fileId))
+      .where(and(eq(files.id, fileId), isNull(files.deletedAt)))
       .returning({
         id: files.id,
         name: files.originalName,

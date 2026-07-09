@@ -2,6 +2,7 @@ import { FileDropZone } from "@/components/FileDropZone";
 import { FileViewer } from "@/components/FileViewer";
 import { getExplorerDetailsTarget } from "@/features/explorer/details";
 import { useExplorerCommands } from "@/features/explorer/hooks";
+import { explorerModeConfigs } from "@/features/explorer/modes";
 import type { ExplorerMode } from "@/features/explorer/state";
 import { useExplorerState } from "@/features/explorer/state";
 import type { ExplorerItem } from "@/features/explorer/types";
@@ -30,13 +31,30 @@ export function Explorer({
   isLoading = false,
   isError = false,
 }: ExplorerProps) {
+  const modeConfig = explorerModeConfigs[mode];
+  const actions = modeConfig.actions;
   const explorer = useExplorerState({ items, mode, folderId });
   const commands = useExplorerCommands({
     items,
     selectedItems: explorer.selectedItems,
-    folderId,
     dispatch: explorer.dispatch,
   });
+  const {
+    fileViewer,
+    isDownloading,
+    isRestoring,
+    isPermanentlyDeleting,
+    openItem,
+    renameItems,
+    deleteItems,
+    restoreItems,
+    permanentlyDeleteItems,
+    downloadItems,
+    renameSelected,
+    deleteSelected,
+    downloadSelected,
+    permanentlyDeleteSelected,
+  } = commands;
 
   const detailsTarget = getExplorerDetailsTarget({
     mode,
@@ -47,6 +65,31 @@ export function Explorer({
   const closeContextMenu = useCallback(() => {
     explorer.dispatch({ type: "close-context-menu" });
   }, [explorer]);
+
+  const handleOpenItem = useCallback(
+    (index: number) => {
+      if (!actions.open) return;
+
+      openItem(index);
+    },
+    [actions.open, openItem],
+  );
+
+  const handleDeleteSelected = useCallback(() => {
+    if (actions.delete) {
+      deleteSelected();
+      return;
+    }
+
+    if (actions.permanentlyDelete) {
+      permanentlyDeleteSelected();
+    }
+  }, [
+    actions.delete,
+    actions.permanentlyDelete,
+    deleteSelected,
+    permanentlyDeleteSelected,
+  ]);
 
   const handleContextMenuItem = useCallback(
     (index: number, event: MouseEvent) => {
@@ -74,33 +117,46 @@ export function Explorer({
   return (
     <>
       <ExplorerKeyboardController
-        enabled={explorer.state.isKeyboardActive && !commands.fileViewer.isOpen}
+        enabled={explorer.state.isKeyboardActive && !fileViewer.isOpen}
         items={items}
         selectedItems={explorer.selectedItems}
         state={explorer.state}
         dispatch={explorer.dispatch}
-        onOpenItem={commands.openItem}
-        onRenameSelected={commands.renameSelected}
-        onDeleteSelected={commands.deleteSelected}
-        onDownloadSelected={commands.downloadSelected}
+        canOpenItems={actions.open}
+        canRename={actions.rename}
+        canDelete={actions.delete || actions.permanentlyDelete}
+        canDownload={actions.download}
+        onOpenItem={handleOpenItem}
+        onRenameSelected={renameSelected}
+        onDeleteSelected={handleDeleteSelected}
+        onDownloadSelected={downloadSelected}
       />
 
       <div className={styles.root} onClick={closeContextMenu}>
         <div className={styles.toolbar}>
           <ManipulationBar
             selectedItems={explorer.selectedItems}
-            isDownloading={commands.isDownloading}
+            actions={actions}
+            isDownloading={isDownloading}
+            isRestoring={isRestoring}
+            isPermanentlyDeleting={isPermanentlyDeleting}
             onClearSelection={() =>
               explorer.dispatch({ type: "clear-selection" })
             }
             onRenameItems={(selectedItems) => {
-              void commands.renameItems(selectedItems);
+              void renameItems(selectedItems);
             }}
             onDownloadItems={(selectedItems) => {
-              void commands.downloadItems(selectedItems);
+              void downloadItems(selectedItems);
             }}
             onDeleteItems={(selectedItems) => {
-              void commands.deleteItems(selectedItems);
+              void deleteItems(selectedItems);
+            }}
+            onRestoreItems={(selectedItems) => {
+              void restoreItems(selectedItems);
+            }}
+            onPermanentlyDeleteItems={(selectedItems) => {
+              void permanentlyDeleteItems(selectedItems);
             }}
             onShowDetails={() => explorer.dispatch({ type: "toggle-details" })}
           />
@@ -113,15 +169,25 @@ export function Explorer({
                 items={items}
                 state={explorer.state}
                 dispatch={explorer.dispatch}
-                onItemOpen={commands.openItem}
+                onItemOpen={handleOpenItem}
                 onItemContextMenu={handleContextMenuItem}
+                canOpenItems={actions.open}
+                ariaLabel={modeConfig.copy.ariaLabel}
+                emptyState={{
+                  title: modeConfig.copy.emptyTitle,
+                  description: modeConfig.copy.emptyDescription,
+                }}
+                errorState={{
+                  title: modeConfig.copy.errorTitle,
+                  description: modeConfig.copy.errorDescription,
+                }}
                 isLoading={isLoading}
                 isError={isError}
               />
             </ExplorerDropZone>
           </div>
 
-          {explorer.state.isDetailsOpen && (
+          {actions.details && explorer.state.isDetailsOpen && (
             <aside className={styles.detailsPanel} aria-label="Details">
               <DetailsView
                 target={detailsTarget}
@@ -136,7 +202,10 @@ export function Explorer({
             x={explorer.state.contextMenu.x}
             y={explorer.state.contextMenu.y}
             items={explorer.contextMenuItems}
-            isDownloading={commands.isDownloading}
+            actions={actions}
+            isDownloading={isDownloading}
+            isRestoring={isRestoring}
+            isPermanentlyDeleting={isPermanentlyDeleting}
             onOpen={() => {
               closeContextMenu();
 
@@ -146,20 +215,28 @@ export function Explorer({
               );
 
               if (itemIndex >= 0) {
-                commands.openItem(itemIndex);
+                handleOpenItem(itemIndex);
               }
             }}
             onRenameItem={(item) => {
               closeContextMenu();
-              void commands.renameItems([item]);
+              void renameItems([item]);
             }}
             onDownloadItems={(itemsToDownload) => {
               closeContextMenu();
-              void commands.downloadItems(itemsToDownload);
+              void downloadItems(itemsToDownload);
             }}
             onDeleteItems={(itemsToDelete) => {
               closeContextMenu();
-              void commands.deleteItems(itemsToDelete);
+              void deleteItems(itemsToDelete);
+            }}
+            onRestoreItems={(itemsToRestore) => {
+              closeContextMenu();
+              void restoreItems(itemsToRestore);
+            }}
+            onPermanentlyDeleteItems={(itemsToDelete) => {
+              closeContextMenu();
+              void permanentlyDeleteItems(itemsToDelete);
             }}
             onDetails={() => {
               closeContextMenu();
@@ -169,32 +246,32 @@ export function Explorer({
         )}
       </div>
 
-      {commands.fileViewer.openedId !== null && (
+      {fileViewer.openedId !== null && (
         <FileViewer
-          fileId={commands.fileViewer.openedId}
-          name={commands.fileViewer.openedFile?.name}
-          onClose={commands.fileViewer.closeFile}
+          fileId={fileViewer.openedId}
+          name={fileViewer.openedFile?.name}
+          onClose={fileViewer.closeFile}
           navigation={{
-            hasNext: commands.fileViewer.hasNextFile,
-            hasPrevious: commands.fileViewer.hasPreviousFile,
-            onNext: commands.fileViewer.openNextFile,
-            onPrevious: commands.fileViewer.openPreviousFile,
+            hasNext: fileViewer.hasNextFile,
+            hasPrevious: fileViewer.hasPreviousFile,
+            onNext: fileViewer.openNextFile,
+            onPrevious: fileViewer.openPreviousFile,
           }}
           onDownload={
-            commands.fileViewer.openedFile
+            actions.download && fileViewer.openedFile
               ? () => {
-                  void commands.downloadItems([commands.fileViewer.openedFile!]);
+                  void downloadItems([fileViewer.openedFile!]);
                 }
               : undefined
           }
           onDelete={
-            commands.fileViewer.openedFile
+            actions.delete && fileViewer.openedFile
               ? () => {
-                  const openedFile = commands.fileViewer.openedFile;
+                  const openedFile = fileViewer.openedFile;
                   if (!openedFile) return;
 
-                  commands.fileViewer.closeFile();
-                  void commands.deleteItems([openedFile]);
+                  fileViewer.closeFile();
+                  void deleteItems([openedFile]);
                 }
               : undefined
           }

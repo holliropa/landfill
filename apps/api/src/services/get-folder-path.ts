@@ -1,5 +1,5 @@
 ﻿import db, { folders } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 export type GetFolderPathResult =
   | { success: true; path: { id: string; name: string }[] }
@@ -22,7 +22,7 @@ export async function getFolderPath(
         parentFolderId: folders.parentFolderId,
       })
       .from(folders)
-      .where(eq(folders.id, id))
+      .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
       .limit(1);
 
     if (!current) {
@@ -41,7 +41,12 @@ export async function getFolderPath(
           parentFolderId: folders.parentFolderId,
         })
         .from(folders)
-        .where(eq(folders.id, current.parentFolderId))
+        .where(
+          and(
+            eq(folders.id, current.parentFolderId),
+            isNull(folders.deletedAt),
+          ),
+        )
         .limit(1);
 
       if (!current) {

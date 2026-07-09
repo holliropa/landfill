@@ -29,6 +29,16 @@ export type ExplorerListProps = {
   dispatch: Dispatch<ExplorerAction>;
   onItemOpen: (index: number) => void;
   onItemContextMenu: (index: number, event: React.MouseEvent) => void;
+  canOpenItems?: boolean;
+  ariaLabel?: string;
+  emptyState?: {
+    title: string;
+    description: string;
+  };
+  errorState?: {
+    title: string;
+    description: string;
+  };
   isLoading?: boolean;
   isError?: boolean;
 };
@@ -39,6 +49,16 @@ export function ExplorerList({
   dispatch,
   onItemOpen,
   onItemContextMenu,
+  canOpenItems = true,
+  ariaLabel = "Folder contents",
+  emptyState = {
+    title: "This folder is empty",
+    description: "Use the toolbar above to upload files or create a folder.",
+  },
+  errorState = {
+    title: "Could not load this folder",
+    description: "Check that the API is running, then try again.",
+  },
   isLoading = false,
   isError = false,
 }: ExplorerListProps) {
@@ -184,7 +204,7 @@ export function ExplorerList({
         className={styles.body}
         role="grid"
         tabIndex={0}
-        aria-label="Folder contents"
+        aria-label={ariaLabel}
         aria-activedescendant={
           state.focusedIndex === null
             ? undefined
@@ -209,16 +229,14 @@ export function ExplorerList({
         ) : isError ? (
           <div className={styles.messageState}>
             <AlertCircleIcon size={24} />
-            <strong>Could not load this folder</strong>
-            <span>Check that the API is running, then try again.</span>
+            <strong>{errorState.title}</strong>
+            <span>{errorState.description}</span>
           </div>
         ) : items.length === 0 ? (
           <div className={styles.messageState}>
             <FolderOpenIcon size={28} />
-            <strong>This folder is empty</strong>
-            <span>
-              Use the toolbar above to upload files or create a folder.
-            </span>
+            <strong>{emptyState.title}</strong>
+            <span>{emptyState.description}</span>
           </div>
         ) : (
           items.map((item, index) => {
@@ -232,6 +250,7 @@ export function ExplorerList({
                 isSelected={isSelected}
                 isFocused={index === state.focusedIndex}
                 gridTemplateColumns={gridTemplateColumns}
+                canOpen={canOpenItems}
                 rowRef={(element) => {
                   rowRefs.current[index] = element;
                 }}
@@ -253,6 +272,7 @@ type ExplorerRowProps = {
   isSelected: boolean;
   isFocused: boolean;
   gridTemplateColumns: string;
+  canOpen: boolean;
   rowRef: (element: HTMLDivElement | null) => void;
   onItemOpen: (index: number) => void;
   onItemClick: (index: number, event: React.MouseEvent) => void;
@@ -265,6 +285,7 @@ const ExplorerRow = React.memo(function ExplorerRow({
   isSelected,
   isFocused,
   gridTemplateColumns,
+  canOpen,
   rowRef,
   onItemOpen,
   onItemClick,
@@ -291,7 +312,11 @@ const ExplorerRow = React.memo(function ExplorerRow({
         onItemClick(index, event);
       }}
       onContextMenu={(event) => onItemContextMenu(index, event)}
-      onDoubleClick={() => onItemOpen(index)}
+      onDoubleClick={() => {
+        if (canOpen) {
+          onItemOpen(index);
+        }
+      }}
       aria-selected={isSelected}
       data-focused={isFocused || undefined}
       role="row"

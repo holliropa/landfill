@@ -1,5 +1,7 @@
 import db, { files, folders } from "@/lib/db";
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { isFolderInActiveTree } from "./trash-visibility";
+import { getAvailableFileName, normalizeFileNameKey } from "./available-name";
 
 export type UploadedFileData = {
   id: string;
@@ -26,14 +28,23 @@ export async function createFiles(
   folderId: string,
 ): Promise<UploadFilesResult> {
   try {
-    return db.transaction((tx) => {
-      const normalizedFolderId = folderId == "root" ? null : folderId;
+    const normalizedFolderId = folderId == "root" ? null : folderId;
 
+    if (
+      normalizedFolderId !== null &&
+      !(await isFolderInActiveTree(normalizedFolderId))
+    ) {
+      return { success: false, code: "FOLDER_NOT_FOUND" };
+    }
+
+    return db.transaction((tx) => {
       if (normalizedFolderId !== null) {
         const [folderExists] = tx
           .select({ id: folders.id })
           .from(folders)
-          .where(eq(folders.id, normalizedFolderId))
+          .where(
+            and(eq(folders.id, normalizedFolderId), isNull(folders.deletedAt)),
+          )
           .limit(1)
           .all();
 
@@ -46,9 +57,12 @@ export async function createFiles(
         .select({ originalName: files.originalName })
         .from(files)
         .where(
-          normalizedFolderId === null
-            ? isNull(files.folderId)
-            : eq(files.folderId, normalizedFolderId),
+          and(
+            normalizedFolderId === null
+              ? isNull(files.folderId)
+              : eq(files.folderId, normalizedFolderId),
+            isNull(files.deletedAt),
+          ),
         )
         .all();
 
@@ -83,40 +97,4 @@ export async function createFiles(
     console.error("Error creating files:", error);
     return { success: false, code: "DATABASE_ERROR" };
   }
-}
-
-function getAvailableFileName(originalName: string, usedNames: Set<string>) {
-  if (!usedNames.has(normalizeFileNameKey(originalName))) {
-    usedNames.add(normalizeFileNameKey(originalName));
-    return originalName;
-  }
-
-  const { baseName, extension } = splitFileName(originalName);
-
-  for (let copyNumber = 1; ; copyNumber++) {
-    const candidate = `${baseName} (${copyNumber})${extension}`;
-    const candidateKey = normalizeFileNameKey(candidate);
-
-    if (!usedNames.has(candidateKey)) {
-      usedNames.add(candidateKey);
-      return candidate;
-    }
-  }
-}
-
-function splitFileName(fileName: string) {
-  const extensionStart = fileName.lastIndexOf(".");
-
-  if (extensionStart <= 0) {
-    return { baseName: fileName, extension: "" };
-  }
-
-  return {
-    baseName: fileName.slice(0, extensionStart),
-    extension: fileName.slice(extensionStart),
-  };
-}
-
-function normalizeFileNameKey(fileName: string) {
-  return fileName.toLocaleLowerCase();
 }

@@ -1,11 +1,11 @@
-﻿import db, { files } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import db, { files } from "@/lib/db";
+import { and, eq, isNull } from "drizzle-orm";
 
 export type DeleteFileResult =
   | { success: true; data: { id: string; diskName: string } }
   | {
       success: false;
-      code: "FILE_NOT_FOUND" | "DATABASE_ERROR";
+      code: "FILE_NOT_FOUND" | "DATABASE_ERROR" | "FILE_IN_TRASH";
     };
 
 export async function deleteFile(id: string): Promise<DeleteFileResult> {
@@ -13,7 +13,7 @@ export async function deleteFile(id: string): Promise<DeleteFileResult> {
     where: { id },
     columns: {
       id: true,
-      diskName: true,
+      deletedAt: true,
     },
   });
 
@@ -21,11 +21,22 @@ export async function deleteFile(id: string): Promise<DeleteFileResult> {
     return { success: false, code: "FILE_NOT_FOUND" };
   }
 
-  const result = await db.delete(files).where(eq(files.id, id));
+  if (file.deletedAt !== null) {
+    return { success: false, code: "FILE_IN_TRASH" };
+  }
 
-  if (result.changes === 0) {
+  const [deletedFile] = await db
+    .update(files)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(files.id, id), isNull(files.deletedAt)))
+    .returning({
+      id: files.id,
+      diskName: files.diskName,
+    });
+
+  if (!deletedFile) {
     return { success: false, code: "DATABASE_ERROR" };
   }
 
-  return { success: true, data: file };
+  return { success: true, data: deletedFile };
 }

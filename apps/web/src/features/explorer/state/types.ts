@@ -1,6 +1,6 @@
 import type { ExplorerItem } from "@/features/explorer/types";
 
-export type ExplorerMode = "folder" | "search";
+export type ExplorerMode = "folder" | "search" | "trash";
 
 export type ExplorerSelectionMode = "replace" | "toggle" | "range";
 

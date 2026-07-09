@@ -10,3 +10,7 @@ export const fileKeys = {
   all: ["files"] as const,
   byId: (id: string) => [...fileKeys.all, "byId", id] as const,
 };
+
+export const trashKeys = {
+  all: ["trash"] as const,
+};
