@@ -10,6 +10,7 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "better-sqlite3": "^12.11.1",
     "prettier": "^3.7.4",
     "turbo": "^2.8.11",
     "typescript": "5.9.2"

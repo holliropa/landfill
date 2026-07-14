@@ -23,20 +23,6 @@ type ArchiveEntry = {
   archivePath: string;
 };
 
-export function startArchiveJob(jobId: string) {
-  void processArchiveJob(jobId).catch(async (error) => {
-    console.error("Error processing download job:", error);
-
-    await db
-      .update(downloadJobs)
-      .set({
-        status: "failed",
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-      })
-      .where(eq(downloadJobs.id, jobId));
-  });
-}
-
 export async function processArchiveJob(jobId: string) {
   await db
     .update(downloadJobs)
