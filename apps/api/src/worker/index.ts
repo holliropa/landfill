@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import config from "@/config";
 import { createArchiveWorker } from "@/jobs/archive/processor";
 

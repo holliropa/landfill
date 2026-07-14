@@ -14,8 +14,6 @@ const storageDir = path.resolve(dataDir, "storage");
 const uploadsDir = path.resolve(storageDir, "uploads");
 const downloadsDir = path.resolve(storageDir, "downloads");
 
-console.log(storageDir)
-
 for (const dir of [
   dataDir,
   databaseDir,

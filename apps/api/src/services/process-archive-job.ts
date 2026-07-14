@@ -23,6 +23,16 @@ type ArchiveEntry = {
   archivePath: string;
 };
 
+export async function markArchiveJobFailed(jobId: string, error: unknown) {
+  await db
+    .update(downloadJobs)
+    .set({
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    })
+    .where(eq(downloadJobs.id, jobId));
+}
+
 export async function processArchiveJob(jobId: string) {
   await db
     .update(downloadJobs)
@@ -179,7 +189,16 @@ async function writeZip(
     const output = fs.createWriteStream(archivePath);
     const archive = archiver("zip", { zlib: { level: 0 } });
 
-    output.on("close", () => resolve());
+    const progressUpdates: Promise<void>[] = [];
+
+    output.on("close", async () => {
+      try {
+        await Promise.all(progressUpdates);
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
     archive.on("error", reject);
     archive.pipe(output);
 
@@ -200,7 +219,7 @@ async function writeZip(
           95,
           20 + Math.round((processed / total) * 75),
         );
-        void onProgress(progress);
+        progressUpdates.push(onProgress(progress));
       }
     }
 

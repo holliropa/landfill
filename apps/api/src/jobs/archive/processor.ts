@@ -1,5 +1,5 @@
-﻿import { createWorkerRedisConnection } from "@/lib/redis";
-import { processArchiveJob } from "@/services";
+import { createWorkerRedisConnection } from "@/lib/redis";
+import { markArchiveJobFailed, processArchiveJob } from "@/services";
 import { Worker } from "bullmq";
 import {
   ArchiveJobName,
@@ -22,6 +22,16 @@ export function createArchiveWorker() {
 
   worker.on("failed", (job, error) => {
     console.error(`[Worker] Failed archive job ${job?.id}: ${error}`);
+
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+      void markArchiveJobFailed(job.data.downloadJobId, error).catch(
+        (markFailedError) => {
+          console.error(
+            `[Worker] Failed to update archive job ${job.id} status: ${markFailedError}`,
+          );
+        },
+      );
+    }
   });
 
   worker.on("error", (error) => {
