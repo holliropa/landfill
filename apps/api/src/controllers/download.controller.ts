@@ -1,11 +1,11 @@
-﻿import { Request, Response } from "express";
+﻿import { addCreateArchiveJob } from "@/jobs/archive/queue";
+import { Request, Response } from "express";
 import { stat } from "fs/promises";
 import {
   createDownloadJob,
   DownloadJobItem,
   getDownloadJob,
   getJobFilePath,
-  startArchiveJob,
 } from "@/services";
 
 export async function createDownloadJobHandler(req: Request, res: Response) {
@@ -29,7 +29,12 @@ export async function createDownloadJobHandler(req: Request, res: Response) {
     }
   }
 
-  void startArchiveJob(createJobResult.data.id);
+  try {
+    await addCreateArchiveJob(createJobResult.data.id);
+  } catch (error) {
+    console.error("[Controller] Error enqueueing archive job:", error);
+    return res.status(503).json({ message: "Unable to enqueue archive job" });
+  }
 
   return res.status(202).json({
     type: "archive",
