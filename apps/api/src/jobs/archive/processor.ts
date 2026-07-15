@@ -1,5 +1,8 @@
-import { createWorkerRedisConnection } from "@/lib/redis";
-import { markArchiveJobFailed, processArchiveJob } from "@/services";
+import { createWorkerRedisConnection } from "@/infrastructure/redis";
+import {
+  markArchiveJobFailed,
+  processArchiveJob,
+} from "@/application/downloads/process-archive-job";
 import { Worker } from "bullmq";
 import {
   ArchiveJobName,

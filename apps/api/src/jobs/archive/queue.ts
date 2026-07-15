@@ -1,4 +1,4 @@
-﻿import { createQueueRedisConnection } from "@/lib/redis";
+import { createQueueRedisConnection } from "@/infrastructure/redis";
 import {
   archiveJobName,
   ArchiveJobName,

@@ -1,0 +1,161 @@
+import { Request, Response } from "express";
+import { createFolder } from "@/application/folders/create-folder";
+import { getFolder } from "@/application/folders/get-folder";
+import { getFolderContent } from "@/application/folders/get-folder-content";
+import { getFolderPath } from "@/application/folders/get-folder-path";
+import { moveFolderToTrash } from "@/application/folders/move-folder-to-trash";
+import { renameFolder } from "@/application/folders/rename-folder";
+
+export async function getFolderHandler(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+
+  const result = await getFolder(id);
+
+  if (!result.success) {
+    switch (result.code) {
+      case "NOT_FOUND":
+        return res.status(404).json({ error: "Folder not found" });
+      case "DATABASE_ERROR":
+      default:
+        return res.status(500).json({ error: "Failed to fetch folder" });
+    }
+  }
+
+  const { parentFolder, ...restFolder } = result.data;
+
+  return res.status(200).json({
+    ...restFolder,
+    parentFolder: parentFolder ?? {
+      id: "root",
+      name: "Root",
+    },
+  });
+}
+
+export async function createFolderHandler(req: Request, res: Response) {
+  const { name, parentFolder } = req.body as {
+    name: string;
+    parentFolder: string;
+  };
+
+  const normalizedParentFolderId =
+    parentFolder === "root" ? null : parentFolder;
+
+  const result = await createFolder(name, normalizedParentFolderId);
+
+  if (!result.success) {
+    switch (result.code) {
+      case "INVALID_NAME":
+        return res.status(400).json({ error: "Invalid folder name" });
+      case "PARENT_NOT_FOUND":
+        return res.status(404).json({ error: "Parent folder not found" });
+      case "DUPLICATE_NAME":
+        return res
+          .status(409)
+          .json({ error: "Folder with the same name already exists" });
+      case "DATABASE_ERROR":
+      default:
+        return res.status(500).json({ error: "Unknown error creating folder" });
+    }
+  }
+
+  return res.status(201).json(result.data);
+}
+
+export async function getFolderContentHandler(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+
+  const folderId = id === "root" ? null : id;
+
+  const result = await getFolderContent(folderId);
+
+  if (!result.success) {
+    switch (result.code) {
+      case "FOLDER_NOT_FOUND":
+        return res.status(404).json({ error: "Folder not found" });
+      case "DATABASE_ERROR":
+      default:
+        return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  return res.json(result.data);
+}
+
+export async function getFolderPathHandler(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+
+  if (!id) return res.status(400).json({ error: "Folder ID is required" });
+
+  const folderId = id === "root" ? null : id;
+
+  const result = await getFolderPath(folderId);
+
+  if (!result.success) {
+    switch (result.code) {
+      case "FOLDER_NOT_FOUND":
+        return res.status(404).json({ error: "Folder not found" });
+      case "DATABASE_ERROR":
+      default:
+        return res.status(500).json({ error: "Failed to fetch folder path" });
+    }
+  }
+
+  return res.json({ path: result.path });
+}
+
+export async function renameFolderHandler(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+  const { name } = req.body as { name: string };
+
+  if (!id || !name)
+    return res.status(400).json({ error: "Folder ID and name are required" });
+
+  const result = await renameFolder(id, name);
+
+  if (!result.success) {
+    switch (result.code) {
+      case "INVALID_NAME":
+        return res.status(400).json({ error: "Invalid folder name" });
+      case "NOT_FOUND":
+        return res.status(404).json({ error: "Folder not found" });
+      case "DUPLICATE_NAME":
+        return res
+          .status(409)
+          .json({ error: "A folder with this name already exists" });
+      case "DATABASE_ERROR":
+      default:
+        return res.status(500).json({ error: "Failed to rename folder" });
+    }
+  }
+
+  return res.status(200).json(result.data);
+}
+
+export async function deleteFolderHandler(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+
+  if (!id) {
+    return res.status(400).json({ error: "Folder ID is required" });
+  }
+
+  if (id === "root") {
+    return res.status(400).json({ error: "Cannot delete root folder" });
+  }
+
+  const result = await moveFolderToTrash(id);
+
+  if (!result.success) {
+    switch (result.code) {
+      case "FOLDER_NOT_FOUND":
+        return res.status(404).json({ error: "Folder not found" });
+      case "FOLDER_IN_TRASH":
+        return res.status(409).json({ error: "Folder is already in trash" });
+      case "DATABASE_ERROR":
+      default:
+        return res.status(500).json({ error: "Failed to delete folder" });
+    }
+  }
+
+  return res.status(200).json(result.data);
+}

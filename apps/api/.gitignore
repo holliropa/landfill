@@ -5,12 +5,3 @@ node_modules
 /prisma/generated/prisma
 
 /generated/prisma
-
-# Local Database
-/dev.db
-
-# Uploaded files
-uploads/
-
-# Download files
-downloads/

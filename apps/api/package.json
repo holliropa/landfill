@@ -3,11 +3,11 @@
   "version": "0.0.2",
   "type": "module",
   "scripts": {
-    "dev": "tsx --watch src/api/index.ts",
-    "dev:api": "tsx --watch src/api/index.ts",
+    "dev": "tsx --watch src/interfaces/http/server.ts",
+    "dev:api": "tsx --watch src/interfaces/http/server.ts",
     "dev:worker": "tsx --watch src/worker/index.ts",
-    "build": "esbuild src/api/index.ts src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outbase=src --outdir=dist",
-    "start": "node dist/api/index.js",
+    "build": "esbuild src/interfaces/http/server.ts src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outbase=src --outdir=dist",
+    "start": "node dist/interfaces/http/server.js",
     "start:worker": "node dist/worker/index.js",
     "check-types": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
