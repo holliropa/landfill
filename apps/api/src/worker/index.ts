@@ -1,8 +1,9 @@
 import "dotenv/config";
 import config from "@/config";
 import { createArchiveWorker } from "@/jobs/archive/processor";
+import { createConversionWorker } from "@/jobs/conversion/processor";
 
-const workers = [createArchiveWorker()];
+const workers = [createArchiveWorker(), createConversionWorker()];
 
 console.log(`[Worker] Started with Redis ${config.redis.url}`);
 

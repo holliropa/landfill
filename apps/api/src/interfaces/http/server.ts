@@ -1,13 +1,15 @@
-import express from "express";
-import cors from "cors";
-import fileRoutes from "@/interfaces/http/files/file.routes";
-import folderRoutes from "@/interfaces/http/folders/folder.routes";
-import downloadRoutes from "@/interfaces/http/downloads/download.routes";
-import storageRoutes from "@/interfaces/http/search/storage.routes";
-import trashRoutes from "@/interfaces/http/trash/trash.routes";
+import { cleanupExpiredJobs } from "@/application/downloads/cleanup-expired-jobs";
 import config from "@/config";
 import "@/infrastructure/db";
-import { cleanupExpiredJobs } from "@/application/downloads/cleanup-expired-jobs";
+import conversionRoutes from "@/interfaces/http/conversions/conversion.routes";
+import converterRoutes from "@/interfaces/http/converters/converter.routes";
+import downloadRoutes from "@/interfaces/http/downloads/download.routes";
+import fileRoutes from "@/interfaces/http/files/file.routes";
+import folderRoutes from "@/interfaces/http/folders/folder.routes";
+import storageRoutes from "@/interfaces/http/search/storage.routes";
+import trashRoutes from "@/interfaces/http/trash/trash.routes";
+import cors from "cors";
+import express from "express";
 
 const app = express();
 const host = config.server.host;
@@ -21,6 +23,8 @@ app.use("/api/folders", folderRoutes);
 app.use("/api/downloads", downloadRoutes);
 app.use("/api/storage", storageRoutes);
 app.use("/api/trash", trashRoutes);
+app.use("/api/converters", converterRoutes);
+app.use("/api/conversions", conversionRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "ok" });
