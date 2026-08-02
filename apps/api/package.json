@@ -3,9 +3,9 @@
   "version": "0.0.2",
   "type": "module",
   "scripts": {
-    "dev": "tsx --watch src/interfaces/http/server.ts",
-    "dev:api": "tsx --watch src/interfaces/http/server.ts",
-    "dev:worker": "tsx --watch src/worker/index.ts",
+    "dev": "tsx --watch --watch-path src src/interfaces/http/server.ts",
+    "dev:api": "tsx --watch --watch-path src src/interfaces/http/server.ts",
+    "dev:worker": "tsx --watch --watch-path src src/worker/index.ts",
     "build": "esbuild src/interfaces/http/server.ts src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outbase=src --outdir=dist",
     "start": "node dist/interfaces/http/server.js",
     "start:worker": "node dist/worker/index.js",
@@ -16,6 +16,8 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
+    "@bull-board/api": "^8.5.0",
+    "@bull-board/express": "^8.5.0",
     "@landfill/db": "*",
     "archiver": "^7.0.1",
     "bullmq": "^5.80.2",

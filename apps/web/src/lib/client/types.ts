@@ -14,3 +14,11 @@ export type StorageItem = {
 export type TrashItem = StorageItem & {
   deletedAt: Date;
 };
+
+type ConversionFormat = "jpeg" | "png" | "webp";
+
+export type CreateConversion = {
+  source: { kind: "file"; id: string };
+  target: { format: ConversionFormat };
+  options?: { quality?: number };
+};

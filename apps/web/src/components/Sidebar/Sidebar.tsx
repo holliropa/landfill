@@ -5,6 +5,7 @@ import {
   ChevronsRight,
   LayoutGrid,
   SettingsIcon,
+  Shuffle,
   Trash,
 } from "lucide-react";
 import { SidebarItem } from "./SidebarItem";
@@ -40,6 +41,12 @@ export function Sidebar() {
           isOpen={isOpen}
           Icon={<Trash size={22} />}
           label="Trash"
+        />
+        <SidebarItem
+          onClick={() => navigate(paths.conversionsPath())}
+          isOpen={isOpen}
+          Icon={<Shuffle size={22} />}
+          label="Convert"
         />
         <div
           style={{

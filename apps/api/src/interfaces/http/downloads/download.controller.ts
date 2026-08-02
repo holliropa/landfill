@@ -103,10 +103,6 @@ export async function downloadArchiveFileHandler(req: Request, res: Response) {
     return res.status(404).json({ message: "Archive file not found" });
   }
 
-  console.log(
-    `Starting file download for job ${job.id} with file: ${job.fileName} and path: ${archivePath}`,
-  );
-
   return res.download(
     archivePath,
     job.fileName,

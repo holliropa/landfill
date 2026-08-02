@@ -16,14 +16,12 @@ export async function getConversionTargetsHandler(req: Request, res: Response) {
   const result = await getConversionTargets(fileId);
 
   if (!result.success) {
-    return res
-      .status(result.code === "FILE_NOT_FOUND" ? 404 : 500)
-      .json({
-        error:
-          result.code === "FILE_NOT_FOUND"
-            ? "File not found"
-            : "Failed to get conversion targets",
-      });
+    return res.status(result.code === "FILE_NOT_FOUND" ? 404 : 500).json({
+      error:
+        result.code === "FILE_NOT_FOUND"
+          ? "File not found"
+          : "Failed to get conversion targets",
+    });
   }
 
   return res.status(200).json({ targets: result.data });

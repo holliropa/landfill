@@ -8,16 +8,31 @@ import fileRoutes from "@/interfaces/http/files/file.routes";
 import folderRoutes from "@/interfaces/http/folders/folder.routes";
 import storageRoutes from "@/interfaces/http/search/storage.routes";
 import trashRoutes from "@/interfaces/http/trash/trash.routes";
+import { archiveQueue } from "@/jobs/archive/queue";
+import { conversionQueue } from "@/jobs/conversion/queue";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
 import cors from "cors";
 import express from "express";
 
 const app = express();
+
+const bullBoardAdapter = new ExpressAdapter();
+bullBoardAdapter.setBasePath("/api/admin/queues");
+
+createBullBoard({
+  queues: [new BullMQAdapter(conversionQueue), new BullMQAdapter(archiveQueue)],
+  serverAdapter: bullBoardAdapter,
+});
+
 const host = config.server.host;
 const port = config.server.port;
 
 app.use(cors());
 app.use(express.json());
 
+app.use("/api/admin/queues", bullBoardAdapter.getRouter() );
 app.use("/api/files", fileRoutes);
 app.use("/api/folders", folderRoutes);
 app.use("/api/downloads", downloadRoutes);

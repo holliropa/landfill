@@ -6,3 +6,4 @@ export * from "./files";
 export * from "./storage";
 export * from "./trash";
 export * from "./invalidation";
+export * from "./conversions";
