@@ -1,5 +1,5 @@
 import { FileThumbnail } from "@/components/FileThumbnail";
-import { Explorer, type ExplorerItem } from "@/features/explorer";
+import type { ExplorerItem } from "@/features/explorer";
 import { useEmptyTrash, useTrashContent } from "@/lib/client";
 import { useDialog } from "@/providers";
 import { Button } from "@/ui/Button";
@@ -7,6 +7,7 @@ import { FolderIcon, Trash2Icon, TrashIcon } from "lucide-react";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import styles from "./TrashPage.module.css";
+import { TrashExplorer } from "./TrashExplorer";
 
 export function TrashPage() {
   const dialog = useDialog();
@@ -80,12 +81,7 @@ export function TrashPage() {
       </div>
 
       <div className={styles.content}>
-        <Explorer
-          items={items}
-          mode="trash"
-          isLoading={isLoading}
-          isError={isError}
-        />
+        <TrashExplorer items={items} isLoading={isLoading} isError={isError} />
       </div>
     </div>
   );

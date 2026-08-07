@@ -5,7 +5,8 @@ import { useMemo } from "react";
 import { FolderIcon } from "lucide-react";
 import { FileThumbnail } from "@/components/FileThumbnail";
 import { FolderNavigationBar } from "@/components/FolderNavigationBar";
-import { Explorer, type ExplorerItem } from "@/features/explorer";
+import type { ExplorerItem } from "@/features/explorer";
+import { FolderExplorer } from "./FolderExplorer";
 
 export function ExplorerPage() {
   const { folderId } = useParams<{ folderId?: string }>();
@@ -46,9 +47,8 @@ export function ExplorerPage() {
         <FolderNavigationBar folderId={normalizedFolderId} />
       </div>
       <div className={styles.content}>
-        <Explorer
+        <FolderExplorer
           items={items}
-          mode="folder"
           folderId={normalizedFolderId}
           isLoading={isLoading}
           isError={isError}

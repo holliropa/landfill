@@ -3,7 +3,8 @@ import { useStorageSearch } from "@/lib/client";
 import { useMemo } from "react";
 import { FolderIcon } from "lucide-react";
 import { FileThumbnail } from "@/components/FileThumbnail";
-import { Explorer, type ExplorerItem } from "@/features/explorer";
+import type { ExplorerItem } from "@/features/explorer";
+import { SearchExplorer } from "./SearchExplorer";
 
 export function SearchPage() {
   const [searchParams] = useSearchParams();
@@ -72,9 +73,8 @@ export function SearchPage() {
           flexDirection: "column",
         }}
       >
-        <Explorer
+        <SearchExplorer
           items={items}
-          mode="search"
           isLoading={isLoading}
           isError={Boolean(error)}
         />

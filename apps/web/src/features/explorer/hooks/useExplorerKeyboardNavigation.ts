@@ -4,24 +4,15 @@ import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut.ts";
 
 type ExplorerKeyboardNavigationParams = {
   items: ExplorerItem[];
-  selectedItems: ExplorerItem[];
   selectedCount: number;
   focusedIndex: number | null;
   lastSelectedIndex: number | null;
   enabled?: boolean;
-  canOpenItems?: boolean;
-  canRename?: boolean;
-  canDelete?: boolean;
-  canDownload?: boolean;
 
   focusItem: (index: number | null) => void;
   selectItem: (index: number, mode?: ExplorerSelectionMode) => void;
   selectAll: () => void;
   resetSelection: () => void;
-  openItem: (index: number) => void;
-  renameSelected: () => void;
-  deleteSelected: () => void;
-  downloadSelected: () => void;
 };
 
 function clampIndex(index: number, itemsLength: number) {
@@ -38,26 +29,16 @@ function getActiveIndex(focusedIndex: number | null, itemsLength: number) {
 
 export function useExplorerKeyboardNavigation({
   items,
-  selectedItems,
   selectedCount,
   focusedIndex,
   lastSelectedIndex,
   enabled = true,
-  canOpenItems = true,
-  canRename = true,
-  canDelete = true,
-  canDownload = true,
   focusItem,
   selectItem,
   selectAll,
   resetSelection,
-  openItem,
-  renameSelected,
-  deleteSelected,
-  downloadSelected,
 }: ExplorerKeyboardNavigationParams) {
   const hasItems = items.length > 0;
-  const singleItem = selectedCount === 1;
 
   const moveFocus = (offset: number, extendSelection: boolean) => {
     const activeIndex = getActiveIndex(focusedIndex, items.length);
@@ -135,17 +116,6 @@ export function useExplorerKeyboardNavigation({
   );
 
   useKeyboardShortcut(
-    "Enter",
-    () => {
-      const activeIndex = getActiveIndex(focusedIndex, items.length);
-      if (activeIndex === null) return;
-
-      openItem(activeIndex);
-    },
-    { enabled: enabled && canOpenItems && singleItem },
-  );
-
-  useKeyboardShortcut(
     " ",
     () => {
       const activeIndex = getActiveIndex(focusedIndex, items.length);
@@ -176,37 +146,6 @@ export function useExplorerKeyboardNavigation({
     },
     {
       enabled: enabled && selectedCount > 0,
-    },
-  );
-
-  useKeyboardShortcut(
-    "F2",
-    () => {
-      renameSelected();
-    },
-    {
-      enabled: enabled && canRename && selectedItems.length === 1,
-    },
-  );
-
-  useKeyboardShortcut(
-    "Delete",
-    () => {
-      deleteSelected();
-    },
-    {
-      enabled: enabled && canDelete && selectedItems.length > 0,
-    },
-  );
-
-  useKeyboardShortcut(
-    "d",
-    () => {
-      downloadSelected();
-    },
-    {
-      ctrlKey: true,
-      enabled: enabled && canDownload && selectedItems.length > 0,
     },
   );
 }

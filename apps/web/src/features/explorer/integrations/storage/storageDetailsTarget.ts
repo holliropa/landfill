@@ -1,25 +1,21 @@
-import type { ExplorerMode, SelectionItem } from "@/features/explorer/state";
-import type { ExplorerItem } from "@/features/explorer/types";
+import type { ExplorerItem } from "@/features/explorer";
 import { isRootFolder } from "@/utils";
 
-export type DetailsTarget =
+export type StorageSelectionItem = Pick<ExplorerItem, "id" | "kind">;
+
+export type StorageDetailsTarget =
   | { type: "none" }
   | { type: "folder"; id: string }
   | { type: "file"; id: string }
-  | {
-      type: "selection";
-      items: SelectionItem[];
-    };
+  | { type: "selection"; items: StorageSelectionItem[] };
 
-export function getExplorerDetailsTarget({
-  mode,
+export function getStorageDetailsTarget({
   folderId,
   selectedItems,
 }: {
-  mode: ExplorerMode;
   folderId?: string;
   selectedItems: ExplorerItem[];
-}): DetailsTarget {
+}): StorageDetailsTarget {
   if (selectedItems.length === 1) {
     const item = selectedItems[0];
     return { type: item.kind, id: item.id };
@@ -28,17 +24,13 @@ export function getExplorerDetailsTarget({
   if (selectedItems.length > 1) {
     return {
       type: "selection",
-      items: selectedItems.map((item) => ({
-        id: item.id,
-        kind: item.kind,
-      })),
+      items: selectedItems.map(({ id, kind }) => ({ id, kind })),
     };
   }
 
-  if (mode === "folder" && folderId && !isRootFolder(folderId)) {
+  if (folderId && !isRootFolder(folderId)) {
     return { type: "folder", id: folderId };
   }
 
   return { type: "none" };
 }
-

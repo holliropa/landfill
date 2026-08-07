@@ -1,7 +1,5 @@
 import type { ExplorerItem } from "@/features/explorer/types";
 
-export type ExplorerMode = "folder" | "search" | "trash";
-
 export type ExplorerSelectionMode = "replace" | "toggle" | "range";
 
 export type SelectionItem = {
@@ -16,8 +14,6 @@ export type ExplorerContextMenuState = {
 } | null;
 
 export type ExplorerState = {
-  mode: ExplorerMode;
-  folderId?: string;
   selectedKeys: Set<string>;
   anchorIndex: number | null;
   focusedIndex: number | null;
@@ -27,7 +23,6 @@ export type ExplorerState = {
 };
 
 export type ExplorerAction =
-  | { type: "props-changed"; mode: ExplorerMode; folderId?: string }
   | { type: "items-changed"; items: ExplorerItem[] }
   | { type: "focus"; index: number | null }
   | { type: "keyboard-active"; active: boolean }

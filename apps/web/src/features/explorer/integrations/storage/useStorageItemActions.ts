@@ -1,4 +1,4 @@
-import type { ExplorerItem } from "@/features/explorer/types";
+import type { ExplorerItem } from "@/features/explorer";
 import {
   createDownload,
   deleteFile,
@@ -8,26 +8,26 @@ import {
   getFileDownloadUrl,
   permanentlyDeleteTrashItem,
   restoreTrashItem,
+  useInvalidateStorageQueries,
   useRenameFile,
   useRenameFolder,
 } from "@/lib/client";
+import { useDialog } from "@/providers";
 import { triggerDownload } from "@/utils";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useDialog } from "@/providers";
-import { useInvalidateStorageQueries } from "@/lib/client";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type ExplorerItemActionsParams = {
+type StorageItemActionsParams = {
   onAfterItemsChanged?: () => void;
 };
 
-export function useExplorerItemActions({
+export function useStorageItemActions({
   onAfterItemsChanged,
-}: ExplorerItemActionsParams) {
+}: StorageItemActionsParams = {}) {
   const dialog = useDialog();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -52,7 +52,7 @@ export function useExplorerItemActions({
       if (!newName || newName === item.name) return;
 
       if (item.kind === "file") {
-        toast.promise(renameFile({ fileId: item.id, newName: newName }), {
+        toast.promise(renameFile({ fileId: item.id, newName }), {
           success: "Renamed successfully",
           error: "Failed to rename",
           duration: 1500,
@@ -60,7 +60,7 @@ export function useExplorerItemActions({
         return;
       }
 
-      toast.promise(renameFolder({ folderId: item.id, newName: newName }), {
+      toast.promise(renameFolder({ folderId: item.id, newName }), {
         success: "Renamed successfully",
         error: "Failed to rename",
         duration: 1500,
@@ -106,9 +106,7 @@ export function useExplorerItemActions({
       });
 
       await deletePromise;
-
       onAfterItemsChanged?.();
-
       await invalidateStorageQueries();
     },
     [dialog, invalidateStorageQueries, onAfterItemsChanged],
@@ -262,3 +260,5 @@ export function useExplorerItemActions({
     downloadItems,
   };
 }
+
+export type StorageItemActions = ReturnType<typeof useStorageItemActions>;

@@ -1,6 +1,6 @@
 import styles from "./ExplorerList.module.css";
 import React, {
-  type Dispatch,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -12,62 +12,58 @@ import { AlertCircleIcon, FolderOpenIcon } from "lucide-react";
 import type {
   ExplorerAction,
   ExplorerSelectionMode,
-  ExplorerState,
 } from "@/features/explorer/state";
+import {
+  createExplorerRuntime,
+  isExplorerCommandDisabled,
+  isExplorerCommandVisible,
+  useExplorerContext,
+} from "../Explorer/ExplorerContext";
+import {
+  defaultExplorerListColumns,
+  type ExplorerListColumn,
+} from "./ExplorerList.columns";
 
-type Column = {
-  key: "thumbnail" | "name" | "date" | "size";
-  label: string;
-  width: number;
-  minWidth: number;
-  resizable: boolean;
+export type ExplorerMessageState = {
+  icon?: ReactNode;
+  title: string;
+  description?: string;
 };
 
 export type ExplorerListProps = {
-  items: ExplorerItem[];
-  state: ExplorerState;
-  dispatch: Dispatch<ExplorerAction>;
-  onItemOpen: (index: number) => void;
-  onItemContextMenu: (index: number, event: React.MouseEvent) => void;
-  canOpenItems?: boolean;
+  columns?: ExplorerListColumn[];
+  openActionId?: string;
   ariaLabel?: string;
-  emptyState?: {
-    title: string;
-    description: string;
-  };
-  errorState?: {
-    title: string;
-    description: string;
-  };
+  emptyState?: ExplorerMessageState | ReactNode;
+  errorState?: ExplorerMessageState | ReactNode;
+  loadingState?: ReactNode;
   isLoading?: boolean;
   isError?: boolean;
 };
 
 export function ExplorerList({
-  items,
-  state,
-  dispatch,
-  onItemOpen,
-  onItemContextMenu,
-  canOpenItems = true,
-  ariaLabel = "Folder contents",
+  columns: initialColumns = defaultExplorerListColumns,
+  openActionId = "open",
+  ariaLabel = "Explorer items",
   emptyState = {
-    title: "This folder is empty",
-    description: "Use the toolbar above to upload files or create a folder.",
+    icon: <FolderOpenIcon size={28} />,
+    title: "No items",
   },
   errorState = {
-    title: "Could not load this folder",
-    description: "Check that the API is running, then try again.",
+    icon: <AlertCircleIcon size={24} />,
+    title: "Could not load items",
   },
+  loadingState,
   isLoading = false,
   isError = false,
 }: ExplorerListProps) {
-  const [columns, setColumns] = useState<Column[]>([
-    { key: "thumbnail", label: "", width: 48, minWidth: 48, resizable: false },
-    { key: "name", label: "Name", width: 320, minWidth: 140, resizable: true },
-    { key: "date", label: "Date", width: 170, minWidth: 120, resizable: true },
-    { key: "size", label: "Size", width: 110, minWidth: 100, resizable: true },
-  ]);
+  const { controller, commands } = useExplorerContext();
+  const { items, state, dispatch } = controller;
+  const [columns, setColumns] = useState(initialColumns);
+  const openCommand = commands.find(
+    (command) =>
+      command.id === openActionId && command.surfaces.includes("item"),
+  );
 
   const dragStateRef = useRef<{
     columnIndex: number;
@@ -78,17 +74,14 @@ export function ExplorerList({
   const headerRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const rowRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const onItemOpenRef = useRef(onItemOpen);
-  const onItemContextMenuRef = useRef(onItemContextMenu);
 
   const gridTemplateColumns = useMemo(() => {
     return columns.map((column) => `${column.width}px`).join(" ");
   }, [columns]);
 
   useEffect(() => {
-    onItemOpenRef.current = onItemOpen;
-    onItemContextMenuRef.current = onItemContextMenu;
-  }, [onItemOpen, onItemContextMenu]);
+    setColumns(initialColumns);
+  }, [initialColumns]);
 
   useEffect(() => {
     const focusedIndex = state.focusedIndex;
@@ -125,16 +118,35 @@ export function ExplorerList({
     [dispatch],
   );
 
-  const handleRowOpen = useCallback((index: number) => {
-    onItemOpenRef.current(index);
-  }, []);
+  const handleRowOpen = useCallback(
+    (index: number) => {
+      const item = items[index];
+      if (!item || !openCommand) return;
+
+      const runtime = createExplorerRuntime({
+        controller,
+        source: "item",
+        targetItems: [item],
+      });
+
+      if (
+        !isExplorerCommandVisible(openCommand, runtime) ||
+        isExplorerCommandDisabled(openCommand, runtime)
+      ) {
+        return;
+      }
+
+      void openCommand.run(runtime);
+    },
+    [controller, items, openCommand],
+  );
 
   const handleRowContextMenu = useCallback(
     (index: number, event: React.MouseEvent) => {
       bodyRef.current?.focus();
-      onItemContextMenuRef.current(index, event);
+      controller.openContextMenu(index, event);
     },
-    [],
+    [controller],
   );
 
   function startResize(
@@ -144,7 +156,7 @@ export function ExplorerList({
     event.preventDefault();
     event.stopPropagation();
 
-    if (!columns[columnIndex].resizable) return;
+    if (columns[columnIndex].resizable === false) return;
 
     dragStateRef.current = {
       columnIndex,
@@ -164,7 +176,10 @@ export function ExplorerList({
 
           return {
             ...column,
-            width: Math.max(column.minWidth, dragState.startWidth + deltaX),
+            width: Math.max(
+              column.minWidth ?? 80,
+              dragState.startWidth + deltaX,
+            ),
           };
         }),
       );
@@ -188,7 +203,12 @@ export function ExplorerList({
         style={{ gridTemplateColumns }}
       >
         {columns.map((column, index) => (
-          <div key={column.key} className={styles.headerCell}>
+          <div
+            key={column.key}
+            className={[styles.headerCell, column.headerClassName]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <span>{column.label}</span>
 
             <div
@@ -225,19 +245,16 @@ export function ExplorerList({
         }}
       >
         {isLoading ? (
-          <ExplorerLoadingRows gridTemplateColumns={gridTemplateColumns} />
+          (loadingState ?? (
+            <ExplorerLoadingRows
+              columns={columns}
+              gridTemplateColumns={gridTemplateColumns}
+            />
+          ))
         ) : isError ? (
-          <div className={styles.messageState}>
-            <AlertCircleIcon size={24} />
-            <strong>{errorState.title}</strong>
-            <span>{errorState.description}</span>
-          </div>
+          <ExplorerListMessage state={errorState} fallbackIcon="error" />
         ) : items.length === 0 ? (
-          <div className={styles.messageState}>
-            <FolderOpenIcon size={28} />
-            <strong>{emptyState.title}</strong>
-            <span>{emptyState.description}</span>
-          </div>
+          <ExplorerListMessage state={emptyState} fallbackIcon="empty" />
         ) : (
           items.map((item, index) => {
             const isSelected = state.selectedKeys.has(item.key);
@@ -247,10 +264,11 @@ export function ExplorerList({
                 key={item.key}
                 item={item}
                 index={index}
+                columns={columns}
                 isSelected={isSelected}
                 isFocused={index === state.focusedIndex}
                 gridTemplateColumns={gridTemplateColumns}
-                canOpen={canOpenItems}
+                canOpen={Boolean(openCommand)}
                 rowRef={(element) => {
                   rowRefs.current[index] = element;
                 }}
@@ -269,6 +287,7 @@ export function ExplorerList({
 type ExplorerRowProps = {
   item: ExplorerItem;
   index: number;
+  columns: ExplorerListColumn[];
   isSelected: boolean;
   isFocused: boolean;
   gridTemplateColumns: string;
@@ -282,6 +301,7 @@ type ExplorerRowProps = {
 const ExplorerRow = React.memo(function ExplorerRow({
   item,
   index,
+  columns,
   isSelected,
   isFocused,
   gridTemplateColumns,
@@ -291,15 +311,6 @@ const ExplorerRow = React.memo(function ExplorerRow({
   onItemClick,
   onItemContextMenu,
 }: ExplorerRowProps) {
-  const formattedDate = useMemo(
-    () => formatDate(item.createdAt),
-    [item.createdAt],
-  );
-  const formattedSize = useMemo(
-    () => (item.size ? formatSize(item.size) : ""),
-    [item.size],
-  );
-
   return (
     <div
       id={`explorer-row-${index}`}
@@ -321,71 +332,90 @@ const ExplorerRow = React.memo(function ExplorerRow({
       data-focused={isFocused || undefined}
       role="row"
     >
-      <div className={`${styles.cell} ${styles.thumbnailCell}`} role="gridcell">
-        <div className={styles.thumbnailBox}>{item.ThumbnailComponent}</div>
-      </div>
-
-      <div className={`${styles.cell} ${styles.nameCell}`} role="gridcell">
-        {item.name}
-      </div>
-
-      <div className={`${styles.cell} ${styles.metaCell}`} role="gridcell">
-        {formattedDate}
-      </div>
-
-      <div className={`${styles.cell} ${styles.metaCell}`} role="gridcell">
-        {formattedSize}
-      </div>
+      {columns.map((column) => (
+        <div
+          key={column.key}
+          className={[styles.cell, column.cellClassName]
+            .filter(Boolean)
+            .join(" ")}
+          role="gridcell"
+        >
+          {column.renderCell(item)}
+        </div>
+      ))}
     </div>
   );
 });
 
 function ExplorerLoadingRows({
+  columns,
   gridTemplateColumns,
 }: {
+  columns: ExplorerListColumn[];
   gridTemplateColumns: string;
 }) {
   return (
     <>
-      {Array.from({ length: 8 }, (_, index) => (
+      {Array.from({ length: 8 }, (_, rowIndex) => (
         <div
-          key={index}
+          key={rowIndex}
           className={styles.loadingRow}
           style={{ gridTemplateColumns }}
           aria-hidden="true"
         >
-          <div className={`${styles.cell} ${styles.thumbnailCell}`}>
-            <span className={styles.loadingThumb} />
-          </div>
-          <div className={styles.cell}>
-            <span className={styles.loadingLine} />
-          </div>
-          <div className={styles.cell}>
-            <span className={styles.loadingLine} />
-          </div>
-          <div className={styles.cell}>
-            <span className={styles.loadingLineShort} />
-          </div>
+          {columns.map((column, columnIndex) => (
+            <div
+              key={column.key}
+              className={[styles.cell, column.cellClassName]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <span
+                className={
+                  columnIndex === 0
+                    ? styles.loadingThumb
+                    : columnIndex === columns.length - 1
+                      ? styles.loadingLineShort
+                      : styles.loadingLine
+                }
+              />
+            </div>
+          ))}
         </div>
       ))}
     </>
   );
 }
 
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
+function ExplorerListMessage({
+  state,
+  fallbackIcon,
+}: {
+  state: ExplorerMessageState | ReactNode;
+  fallbackIcon: "empty" | "error";
+}) {
+  if (!isExplorerMessageState(state)) {
+    return <>{state}</>;
+  }
+
+  return (
+    <div className={styles.messageState}>
+      {state.icon ??
+        (fallbackIcon === "empty" ? (
+          <FolderOpenIcon size={28} />
+        ) : (
+          <AlertCircleIcon size={24} />
+        ))}
+      <strong>{state.title}</strong>
+      {state.description && <span>{state.description}</span>}
+    </div>
+  );
 }
 
-function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function isExplorerMessageState(
+  state: ExplorerMessageState | ReactNode,
+): state is ExplorerMessageState {
+  return typeof state === "object" && state !== null && "title" in state;
 }
 
 function getSelectionMode(event: React.MouseEvent): ExplorerSelectionMode {

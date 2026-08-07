@@ -1,126 +1,54 @@
-import type { ExplorerActionAvailability } from "@/features/explorer/modes";
-import type { ExplorerItem } from "@/features/explorer/types";
 import {
-  ArchiveRestoreIcon,
-  DownloadIcon,
-  ExternalLinkIcon,
-  FileEditIcon,
-  InfoIcon,
-  Trash2Icon,
-  TrashIcon,
-} from "lucide-react";
+  getExplorerCommandIcon,
+  isExplorerCommandDisabled,
+  useExplorerCommandList,
+  useExplorerContext,
+} from "../Explorer/ExplorerContext";
 import styles from "./ContextMenu.module.css";
 
 export type ExplorerContextMenuProps = {
-  x: number;
-  y: number;
-  items: ExplorerItem[];
-  actions: ExplorerActionAvailability;
-  isDownloading: boolean;
-  isRestoring: boolean;
-  isPermanentlyDeleting: boolean;
-  onOpen: () => void;
-  onRenameItem: (item: ExplorerItem) => void;
-  onDownloadItems: (items: ExplorerItem[]) => void;
-  onDeleteItems: (items: ExplorerItem[]) => void;
-  onRestoreItems: (items: ExplorerItem[]) => void;
-  onPermanentlyDeleteItems: (items: ExplorerItem[]) => void;
-  onDetails: () => void;
+  ids?: readonly string[];
 };
 
-export function ContextMenu({
-  x,
-  y,
-  items,
-  actions,
-  isDownloading,
-  isRestoring,
-  isPermanentlyDeleting,
-  onOpen,
-  onRenameItem,
-  onDownloadItems,
-  onDeleteItems,
-  onRestoreItems,
-  onPermanentlyDeleteItems,
-  onDetails,
-}: ExplorerContextMenuProps) {
-  const canRename = items.length === 1;
+export function ExplorerContextMenu({ ids }: ExplorerContextMenuProps) {
+  const { controller } = useExplorerContext();
+  const targetItems = controller.contextMenuItems;
+  const { commands, runtime } = useExplorerCommandList(
+    "context-menu",
+    ids,
+    targetItems,
+  );
+  const contextMenu = controller.state.contextMenu;
+
+  if (!contextMenu || commands.length === 0) {
+    return null;
+  }
 
   return (
     <div
       className={styles.contextMenu}
-      style={{ left: x, top: y }}
+      style={{ left: contextMenu.x, top: contextMenu.y }}
       role="menu"
       onClick={(event) => event.stopPropagation()}
     >
-      {actions.open && (
-        <button type="button" role="menuitem" onClick={onOpen}>
-          <ExternalLinkIcon size={16} />
-          <span>Open</span>
-        </button>
-      )}
-      {actions.rename && (
+      {commands.map((command) => (
         <button
+          key={command.id}
           type="button"
           role="menuitem"
-          onClick={() => onRenameItem(items[0])}
-          disabled={!canRename}
+          className={
+            command.intent === "danger" ? styles.dangerMenuItem : undefined
+          }
+          onClick={() => {
+            controller.closeContextMenu();
+            void command.run(runtime);
+          }}
+          disabled={isExplorerCommandDisabled(command, runtime)}
         >
-          <FileEditIcon size={16} />
-          <span>Rename</span>
+          {getExplorerCommandIcon(command, runtime)}
+          <span>{command.label}</span>
         </button>
-      )}
-      {actions.download && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => onDownloadItems(items)}
-          disabled={isDownloading}
-        >
-          <DownloadIcon size={16} />
-          <span>Download</span>
-        </button>
-      )}
-      {actions.restore && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => onRestoreItems(items)}
-          disabled={isRestoring}
-        >
-          <ArchiveRestoreIcon size={16} />
-          <span>Restore</span>
-        </button>
-      )}
-      {actions.details && (
-        <button type="button" role="menuitem" onClick={onDetails}>
-          <InfoIcon size={16} />
-          <span>Details</span>
-        </button>
-      )}
-      {actions.delete && (
-        <button
-          type="button"
-          role="menuitem"
-          className={styles.dangerMenuItem}
-          onClick={() => onDeleteItems(items)}
-        >
-          <TrashIcon size={16} />
-          <span>Move to trash</span>
-        </button>
-      )}
-      {actions.permanentlyDelete && (
-        <button
-          type="button"
-          role="menuitem"
-          className={styles.dangerMenuItem}
-          onClick={() => onPermanentlyDeleteItems(items)}
-          disabled={isPermanentlyDeleting}
-        >
-          <Trash2Icon size={16} />
-          <span>Delete permanently</span>
-        </button>
-      )}
+      ))}
     </div>
   );
 }

@@ -62,3 +62,5 @@ export function useExplorerFileViewer({ items }: ExplorerFileViewerParams) {
     hasNextFile,
   };
 }
+
+export type ExplorerFileViewerApi = ReturnType<typeof useExplorerFileViewer>;

@@ -1,28 +1,17 @@
 import { useEffect, useMemo, useReducer } from "react";
 import type { ExplorerItem } from "@/features/explorer/types";
-import type { ExplorerAction, ExplorerMode, ExplorerState } from "./types";
+import type { ExplorerAction, ExplorerState } from "./types";
 
 type ExplorerStateParams = {
   items: ExplorerItem[];
-  mode: ExplorerMode;
-  folderId?: string;
 };
 
-export function useExplorerState({
-  items,
-  mode,
-  folderId,
-}: ExplorerStateParams) {
+export function useExplorerState({ items }: ExplorerStateParams) {
   const [state, dispatch] = useReducer(
     (currentState: ExplorerState, action: ExplorerAction) =>
       explorerReducer(currentState, action, items),
-    { mode, folderId },
-    createInitialState,
+    createInitialState(),
   );
-
-  useEffect(() => {
-    dispatch({ type: "props-changed", mode, folderId });
-  }, [folderId, mode]);
 
   useEffect(() => {
     dispatch({ type: "items-changed", items });
@@ -57,13 +46,8 @@ export function useExplorerState({
   };
 }
 
-function createInitialState({
-  mode,
-  folderId,
-}: Pick<ExplorerState, "mode" | "folderId">): ExplorerState {
+function createInitialState(): ExplorerState {
   return {
-    mode,
-    folderId,
     selectedKeys: new Set(),
     anchorIndex: null,
     focusedIndex: null,
@@ -79,13 +63,6 @@ function explorerReducer(
   items: ExplorerItem[],
 ): ExplorerState {
   switch (action.type) {
-    case "props-changed":
-      return {
-        ...state,
-        mode: action.mode,
-        folderId: action.folderId,
-      };
-
     case "items-changed":
       return reconcileItems(state, action.items);
 
@@ -137,7 +114,8 @@ function explorerReducer(
       const item = items[action.index];
       if (!item) return state;
 
-      const anchorIndex = state.anchorIndex ?? state.focusedIndex ?? action.index;
+      const anchorIndex =
+        state.anchorIndex ?? state.focusedIndex ?? action.index;
 
       return {
         ...state,
@@ -190,7 +168,9 @@ function explorerReducer(
         selectedKeys: action.replaceSelection
           ? new Set(action.itemKeys)
           : state.selectedKeys,
-        anchorIndex: action.replaceSelection ? action.focusIndex : state.anchorIndex,
+        anchorIndex: action.replaceSelection
+          ? action.focusIndex
+          : state.anchorIndex,
       };
 
     case "close-context-menu":
@@ -244,4 +224,3 @@ function clampNullableIndex(index: number | null, itemsLength: number) {
 
   return Math.max(0, Math.min(index, itemsLength - 1));
 }
-

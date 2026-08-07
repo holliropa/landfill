@@ -13,7 +13,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut.ts";
 
 const FILE_NAME_DISPLAY_LIMIT = 38;
@@ -29,6 +29,7 @@ export type FileViewerProps = {
     onPrevious: () => void;
     onNext: () => void;
   };
+  actions?: ReactNode;
   onDownload?: () => void;
   onDelete?: () => void;
 };
@@ -89,6 +90,7 @@ export function FileViewer({
   name,
   onClose,
   navigation,
+  actions,
   onDownload,
   onDelete,
 }: FileViewerProps) {
@@ -152,24 +154,30 @@ export function FileViewer({
           />
         </div>
         <div className={styles.actionContainer}>
-          <IconButton
-            icon={<DownloadIcon />}
-            variant="ghost"
-            size="large"
-            onClick={onDownload}
-            disabled={!onDownload}
-            aria-label="Download file"
-            title="Download"
-          />
-          <IconButton
-            icon={<TrashIcon color="#a2030d" />}
-            variant="ghost"
-            size="large"
-            onClick={onDelete}
-            disabled={!onDelete}
-            aria-label="Delete file"
-            title="Delete"
-          />
+          {actions !== undefined ? (
+            actions
+          ) : (
+            <>
+              <IconButton
+                icon={<DownloadIcon />}
+                variant="ghost"
+                size="large"
+                onClick={onDownload}
+                disabled={!onDownload}
+                aria-label="Download file"
+                title="Download"
+              />
+              <IconButton
+                icon={<TrashIcon color="#a2030d" />}
+                variant="ghost"
+                size="large"
+                onClick={onDelete}
+                disabled={!onDelete}
+                aria-label="Delete file"
+                title="Delete"
+              />
+            </>
+          )}
         </div>
       </div>
       <div className={styles.mediaContainer}>
