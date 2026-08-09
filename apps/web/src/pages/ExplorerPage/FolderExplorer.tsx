@@ -11,6 +11,7 @@ import {
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
+import { useId, useMemo } from "react";
 
 const toolbarCommandIds = [
   "rename",
@@ -26,6 +27,12 @@ const contextMenuCommandIds = [
   "moveToTrash",
 ] as const;
 const viewerCommandIds = ["download", "moveToTrash"] as const;
+const detailsCommandIds = [
+  "open",
+  "rename",
+  "download",
+  "moveToTrash",
+] as const;
 
 export function FolderExplorer({
   items,
@@ -43,7 +50,11 @@ export function FolderExplorer({
     onAfterItemsChanged: controller.clearSelection,
   });
   const openFolder = useFolderNavigation();
-  const commands = createStorageExplorerCommands({ openFolder, storage });
+  const commands = useMemo(
+    () => createStorageExplorerCommands({ openFolder, storage }),
+    [openFolder, storage],
+  );
+  const detailsTitleId = useId();
 
   return (
     <Explorer controller={controller} commands={commands}>
@@ -63,7 +74,7 @@ export function FolderExplorer({
                 emptyState={{
                   title: "This folder is empty",
                   description:
-                    "Use the toolbar above to upload files or create a folder.",
+                    "Drop files here, or use the folder controls to upload files or create a folder.",
                 }}
                 errorState={{
                   title: "Could not load this folder",
@@ -75,7 +86,7 @@ export function FolderExplorer({
             </FolderUploadDropZone>
           </Explorer.Content>
 
-          <Explorer.DetailsPanel>
+          <Explorer.DetailsPanel ariaLabelledBy={detailsTitleId}>
             {(runtime) => (
               <StorageDetailsView
                 target={getStorageDetailsTarget({
@@ -83,6 +94,17 @@ export function FolderExplorer({
                   selectedItems: runtime.selectedItems,
                 })}
                 onClose={runtime.closeDetails}
+                titleId={detailsTitleId}
+                actions={
+                  runtime.targetItems.length > 0 ? (
+                    <Explorer.ActionGroup
+                      surface="details"
+                      ids={detailsCommandIds}
+                      targetItems={runtime.targetItems}
+                      size="small"
+                    />
+                  ) : undefined
+                }
               />
             )}
           </Explorer.DetailsPanel>

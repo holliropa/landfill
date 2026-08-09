@@ -134,7 +134,7 @@ export function useExplorerKeyboardNavigation({
       selectAll();
     },
     {
-      ctrlKey: true,
+      primaryKey: true,
       enabled: enabled && hasItems,
     },
   );

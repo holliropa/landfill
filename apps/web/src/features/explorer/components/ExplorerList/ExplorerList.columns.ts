@@ -1,4 +1,5 @@
 import type { ExplorerItem } from "@/features/explorer/types";
+import { formatDateTime, formatSize } from "@/utils";
 import { createElement, type ReactNode } from "react";
 import styles from "./ExplorerList.module.css";
 
@@ -50,22 +51,15 @@ export const defaultExplorerListColumns: ExplorerListColumn[] = [
     width: 110,
     minWidth: 100,
     cellClassName: styles.metaCell,
-    renderCell: (item) => (item.size ? formatExplorerSize(item.size) : ""),
+    renderCell: (item) =>
+      item.size !== null ? formatExplorerSize(item.size) : "",
   },
 ];
 
 export function formatExplorerDate(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
+  return formatDateTime(date);
 }
 
 export function formatExplorerSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return formatSize(bytes);
 }

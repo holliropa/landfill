@@ -10,26 +10,27 @@ export type ExplorerControllerParams = {
 export function useExplorerController({ items }: ExplorerControllerParams) {
   const explorer = useExplorerState({ items });
   const fileViewer = useExplorerFileViewer({ items });
+  const { dispatch } = explorer;
 
   const clearSelection = useCallback(() => {
-    explorer.dispatch({ type: "clear-selection" });
-  }, [explorer]);
+    dispatch({ type: "clear-selection" });
+  }, [dispatch]);
 
   const closeContextMenu = useCallback(() => {
-    explorer.dispatch({ type: "close-context-menu" });
-  }, [explorer]);
+    dispatch({ type: "close-context-menu" });
+  }, [dispatch]);
 
   const openDetails = useCallback(() => {
-    explorer.dispatch({ type: "open-details" });
-  }, [explorer]);
+    dispatch({ type: "open-details" });
+  }, [dispatch]);
 
   const closeDetails = useCallback(() => {
-    explorer.dispatch({ type: "close-details" });
-  }, [explorer]);
+    dispatch({ type: "close-details" });
+  }, [dispatch]);
 
   const toggleDetails = useCallback(() => {
-    explorer.dispatch({ type: "toggle-details" });
-  }, [explorer]);
+    dispatch({ type: "toggle-details" });
+  }, [dispatch]);
 
   const openContextMenu = useCallback(
     (index: number, event: MouseEvent) => {
@@ -43,7 +44,7 @@ export function useExplorerController({ items }: ExplorerControllerParams) {
         ? explorer.selectedItems.map((selectedItem) => selectedItem.key)
         : [item.key];
 
-      explorer.dispatch({
+      dispatch({
         type: "open-context-menu",
         x: event.clientX,
         y: event.clientY,
@@ -52,7 +53,7 @@ export function useExplorerController({ items }: ExplorerControllerParams) {
         replaceSelection: !isSelected,
       });
     },
-    [explorer, items],
+    [dispatch, explorer.selectedItems, explorer.state.selectedKeys, items],
   );
 
   return {
@@ -61,7 +62,7 @@ export function useExplorerController({ items }: ExplorerControllerParams) {
     selectedItems: explorer.selectedItems,
     selectedCount: explorer.selectedCount,
     contextMenuItems: explorer.contextMenuItems,
-    dispatch: explorer.dispatch,
+    dispatch,
     fileViewer,
     clearSelection,
     closeContextMenu,

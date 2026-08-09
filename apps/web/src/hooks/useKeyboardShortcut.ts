@@ -33,6 +33,7 @@ type ShortcutOptions = {
   enabled?: boolean;
   ignoreEditableTargets?: boolean;
   preventDefault?: boolean;
+  primaryKey?: boolean;
   ctrlKey?: boolean;
   metaKey?: boolean;
   shiftKey?: boolean;
@@ -57,6 +58,7 @@ export function useKeyboardShortcut(
     enabled = true,
     ignoreEditableTargets = true,
     preventDefault = true,
+    primaryKey,
     ctrlKey,
     metaKey,
     shiftKey,
@@ -81,11 +83,15 @@ export function useKeyboardShortcut(
         return;
       }
 
-      if (ctrlKey !== undefined && event.ctrlKey !== ctrlKey) {
+      if (primaryKey && !event.ctrlKey && !event.metaKey) {
         return;
       }
 
-      if (metaKey !== undefined && event.metaKey !== metaKey) {
+      if (!primaryKey && ctrlKey !== undefined && event.ctrlKey !== ctrlKey) {
+        return;
+      }
+
+      if (!primaryKey && metaKey !== undefined && event.metaKey !== metaKey) {
         return;
       }
 
@@ -114,6 +120,7 @@ export function useKeyboardShortcut(
     enabled,
     ignoreEditableTargets,
     preventDefault,
+    primaryKey,
     ctrlKey,
     metaKey,
     shiftKey,

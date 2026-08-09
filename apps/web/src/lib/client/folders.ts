@@ -5,6 +5,7 @@ import {
   getFolder,
   getFolderContent,
   getFolderPath,
+  HttpError,
   renameFolder,
 } from "./api.ts";
 import { folderKeys } from "./keys";
@@ -76,9 +77,13 @@ export function useDeleteFolder() {
   });
 }
 
-export function useFolder(folderId: string) {
+export function useFolder(folderId: string, { enabled = true } = {}) {
   return useQuery({
     queryKey: folderKeys.byId(folderId),
-    queryFn: () => getFolder(folderId),
+    queryFn: ({ signal }) => getFolder(folderId, signal),
+    enabled: enabled && folderId.length > 0,
+    retry: (failureCount, error) =>
+      (!(error instanceof HttpError) || error.status !== 404) &&
+      failureCount < 2,
   });
 }

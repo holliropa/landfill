@@ -7,6 +7,7 @@ import {
   createTrashExplorerCommands,
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
+import { useMemo } from "react";
 
 const trashCommandIds = ["restore", "deleteForever"] as const;
 
@@ -23,7 +24,10 @@ export function TrashExplorer({
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
-  const commands = createTrashExplorerCommands(storage);
+  const commands = useMemo(
+    () => createTrashExplorerCommands(storage),
+    [storage],
+  );
 
   return (
     <Explorer controller={controller} commands={commands}>

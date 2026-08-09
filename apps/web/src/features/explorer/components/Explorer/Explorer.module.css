@@ -46,6 +46,7 @@
 }
 
 .workspace {
+  position: relative;
   display: flex;
   flex: 1;
   min-width: 0;
@@ -59,4 +60,20 @@
   display: flex;
   width: var(--details-panel-width);
   border-left: 1px solid var(--divider);
+  outline: none;
+}
+
+.detailsPanel:focus-visible {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+@media (max-width: 900px) {
+  .detailsPanel {
+    position: absolute;
+    z-index: 10;
+    inset: 0 0 0 auto;
+    width: min(100%, 440px);
+    background: var(--surface);
+    box-shadow: -12px 0 28px rgb(0 0 0 / 18%);
+  }
 }

@@ -10,6 +10,7 @@ import {
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
+import { useId, useMemo } from "react";
 
 const toolbarCommandIds = [
   "rename",
@@ -25,6 +26,12 @@ const contextMenuCommandIds = [
   "moveToTrash",
 ] as const;
 const viewerCommandIds = ["download", "moveToTrash"] as const;
+const detailsCommandIds = [
+  "open",
+  "rename",
+  "download",
+  "moveToTrash",
+] as const;
 
 export function SearchExplorer({
   items,
@@ -40,7 +47,11 @@ export function SearchExplorer({
     onAfterItemsChanged: controller.clearSelection,
   });
   const openFolder = useFolderNavigation();
-  const commands = createStorageExplorerCommands({ openFolder, storage });
+  const commands = useMemo(
+    () => createStorageExplorerCommands({ openFolder, storage }),
+    [openFolder, storage],
+  );
+  const detailsTitleId = useId();
 
   return (
     <Explorer controller={controller} commands={commands}>
@@ -69,13 +80,24 @@ export function SearchExplorer({
             />
           </Explorer.Content>
 
-          < Explorer.DetailsPanel>
+          <Explorer.DetailsPanel ariaLabelledBy={detailsTitleId}>
             {(runtime) => (
               <StorageDetailsView
                 target={getStorageDetailsTarget({
                   selectedItems: runtime.selectedItems,
                 })}
                 onClose={runtime.closeDetails}
+                titleId={detailsTitleId}
+                actions={
+                  runtime.targetItems.length > 0 ? (
+                    <Explorer.ActionGroup
+                      surface="details"
+                      ids={detailsCommandIds}
+                      targetItems={runtime.targetItems}
+                      size="small"
+                    />
+                  ) : undefined
+                }
               />
             )}
           </Explorer.DetailsPanel>

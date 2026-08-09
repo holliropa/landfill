@@ -1,4 +1,5 @@
 import { paths } from "@/router";
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 export type FolderNavigationTarget = {
@@ -9,9 +10,12 @@ export type FolderNavigationTarget = {
 export function useFolderNavigation() {
   const navigate = useNavigate();
 
-  return (target?: string | FolderNavigationTarget) => {
-    const folderId = typeof target === "string" ? target : target?.id;
+  return useCallback(
+    (target?: string | FolderNavigationTarget) => {
+      const folderId = typeof target === "string" ? target : target?.id;
 
-    navigate(paths.folderPath(folderId));
-  };
+      navigate(paths.folderPath(folderId));
+    },
+    [navigate],
+  );
 }

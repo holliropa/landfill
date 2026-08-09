@@ -2,6 +2,7 @@
 import {
   deleteFile,
   getFileById,
+  HttpError,
   renameFile,
   uploadFiles,
 } from "@/lib/client/api.ts";
@@ -52,9 +53,17 @@ export function useDeleteFile() {
   });
 }
 
-export function useFile(id: string) {
+export function useFile(id: string, { enabled = true } = {}) {
   return useQuery({
     queryKey: fileKeys.byId(id),
-    queryFn: () => getFileById(id),
+    queryFn: ({ signal }) => getFileById(id, signal),
+    enabled: enabled && id.length > 0,
+    retry: shouldRetryDetailsQuery,
   });
+}
+
+function shouldRetryDetailsQuery(failureCount: number, error: Error) {
+  return (
+    (!(error instanceof HttpError) || error.status !== 404) && failureCount < 2
+  );
 }

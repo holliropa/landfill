@@ -13,6 +13,7 @@ export type ExplorerSurface =
 
 export type ExplorerCommandShortcut = {
   key: string;
+  primaryKey?: boolean;
   ctrlKey?: boolean;
   metaKey?: boolean;
   shiftKey?: boolean;

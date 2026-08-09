@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ExplorerItem } from "@/features/explorer/types";
 
 type ExplorerFileViewerParams = {
@@ -24,29 +24,29 @@ export function useExplorerFileViewer({ items }: ExplorerFileViewerParams) {
   const hasNextFile =
     openedFileIndex >= 0 && openedFileIndex < files.length - 1;
 
-  const openFile = (fileId: string) => {
+  const openFile = useCallback((fileId: string) => {
     setOpenedId(fileId);
-  };
+  }, []);
 
-  const closeFile = () => {
+  const closeFile = useCallback(() => {
     setOpenedId(null);
-  };
+  }, []);
 
-  const openPreviousFile = () => {
+  const openPreviousFile = useCallback(() => {
     if (!hasPreviousFile) {
       return;
     }
 
     setOpenedId(files[openedFileIndex - 1].id);
-  };
+  }, [files, hasPreviousFile, openedFileIndex]);
 
-  const openNextFile = () => {
+  const openNextFile = useCallback(() => {
     if (!hasNextFile) {
       return;
     }
 
     setOpenedId(files[openedFileIndex + 1].id);
-  };
+  }, [files, hasNextFile, openedFileIndex]);
   return {
     openedId,
     openedFile,

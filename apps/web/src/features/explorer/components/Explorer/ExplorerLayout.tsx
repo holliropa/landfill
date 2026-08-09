@@ -2,7 +2,7 @@ import type { ExplorerRuntime } from "./Explorer.types";
 import { useExplorerContext, useExplorerRuntime } from "./ExplorerContext";
 import { IconButton } from "@/ui/IconButton";
 import { XIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import styles from "./Explorer.module.css";
 
 export function ExplorerShell({
@@ -62,20 +62,58 @@ export function ExplorerDetailsPanel({
   children,
   enabled = true,
   ariaLabel = "Details",
+  ariaLabelledBy,
+  autoFocus = true,
 }: {
   children: ReactNode | ((runtime: ExplorerRuntime) => ReactNode);
   enabled?: boolean;
   ariaLabel?: string;
+  ariaLabelledBy?: string;
+  autoFocus?: boolean;
 }) {
   const { controller } = useExplorerContext();
   const runtime = useExplorerRuntime("details");
+  const panelRef = useRef<HTMLElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const isOpen = enabled && controller.state.isDetailsOpen;
 
-  if (!enabled || !controller.state.isDetailsOpen) {
+  useEffect(() => {
+    if (!isOpen || !autoFocus) return;
+
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    panelRef.current?.focus({ preventScroll: true });
+
+    return () => {
+      const previousFocus = previousFocusRef.current;
+      previousFocusRef.current = null;
+
+      if (previousFocus?.isConnected) {
+        previousFocus.focus({ preventScroll: true });
+      }
+    };
+  }, [autoFocus, isOpen]);
+
+  if (!isOpen) {
     return null;
   }
 
   return (
-    <aside className={styles.detailsPanel} aria-label={ariaLabel}>
+    <aside
+      ref={panelRef}
+      className={styles.detailsPanel}
+      aria-label={ariaLabelledBy ? undefined : ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        controller.closeDetails();
+      }}
+    >
       {typeof children === "function" ? children(runtime) : children}
     </aside>
   );

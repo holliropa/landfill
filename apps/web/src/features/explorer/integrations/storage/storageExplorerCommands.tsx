@@ -29,12 +29,12 @@ export function createStorageExplorerCommands({
       id: "open",
       label: "Open",
       icon: <ExternalLinkIcon size={16} />,
-      surfaces: ["item", "context-menu", "keyboard"],
+      surfaces: ["item", "context-menu", "keyboard", "details"],
       shortcut: { key: "Enter" },
       order: 10,
-      isVisible: (runtime) => getPrimaryCommandItem(runtime) !== undefined,
-      isDisabled: (runtime) =>
-        runtime.source === "keyboard" && runtime.selectedItems.length !== 1,
+      isVisible: (runtime) =>
+        getPrimaryCommandItem(runtime) !== undefined &&
+        runtime.targetItems.length === 1,
       run: (runtime) => {
         const item = getPrimaryCommandItem(runtime);
         if (!item) return;
@@ -51,11 +51,17 @@ export function createStorageExplorerCommands({
     {
       id: "rename",
       label: "Rename",
-      icon: <FileEditIcon size={16} />,
-      surfaces: ["toolbar", "context-menu", "keyboard"],
+      icon: () =>
+        storage.isRenaming ? (
+          <SpinnerIcon size={16} />
+        ) : (
+          <FileEditIcon size={16} />
+        ),
+      surfaces: ["toolbar", "context-menu", "keyboard", "details"],
       shortcut: { key: "F2" },
       order: 20,
-      isDisabled: (runtime) => runtime.targetItems.length !== 1,
+      isDisabled: (runtime) =>
+        storage.isRenaming || runtime.targetItems.length !== 1,
       run: (runtime) => {
         void storage.renameItems(runtime.targetItems);
       },
@@ -69,8 +75,14 @@ export function createStorageExplorerCommands({
         ) : (
           <DownloadIcon size={16} />
         ),
-      surfaces: ["toolbar", "context-menu", "file-viewer", "keyboard"],
-      shortcut: { key: "d", ctrlKey: true },
+      surfaces: [
+        "toolbar",
+        "context-menu",
+        "file-viewer",
+        "keyboard",
+        "details",
+      ],
+      shortcut: { key: "d", primaryKey: true },
       order: 30,
       isDisabled: (runtime) =>
         storage.isDownloading || runtime.targetItems.length === 0,
@@ -96,12 +108,24 @@ export function createStorageExplorerCommands({
     {
       id: "moveToTrash",
       label: "Move to trash",
-      icon: <TrashIcon color="#a2030d" size={16} />,
-      surfaces: ["toolbar", "context-menu", "file-viewer", "keyboard"],
+      icon: () =>
+        storage.isDeleting ? (
+          <SpinnerIcon size={16} />
+        ) : (
+          <TrashIcon color="#a2030d" size={16} />
+        ),
+      surfaces: [
+        "toolbar",
+        "context-menu",
+        "file-viewer",
+        "keyboard",
+        "details",
+      ],
       shortcut: { key: "Delete" },
       order: 50,
       intent: "danger",
-      isDisabled: (runtime) => runtime.targetItems.length === 0,
+      isDisabled: (runtime) =>
+        storage.isDeleting || runtime.targetItems.length === 0,
       run: (runtime) => {
         if (runtime.source === "file-viewer") {
           runtime.fileViewer.closeFile();
@@ -127,7 +151,7 @@ export function createTrashExplorerCommands(
           <ArchiveRestoreIcon size={16} />
         ),
       surfaces: ["toolbar", "context-menu", "keyboard"],
-      shortcut: { key: "r", ctrlKey: true },
+      shortcut: { key: "r", primaryKey: true },
       order: 10,
       isDisabled: (runtime) =>
         storage.isRestoring || runtime.targetItems.length === 0,

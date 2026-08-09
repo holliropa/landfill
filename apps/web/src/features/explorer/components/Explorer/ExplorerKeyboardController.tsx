@@ -96,9 +96,14 @@ function matchesCommandShortcut(
     return false;
   }
 
+  if (shortcut.primaryKey && !event.ctrlKey && !event.metaKey) {
+    return false;
+  }
+
   return (
-    matchesModifier(shortcut.ctrlKey, event.ctrlKey) &&
-    matchesModifier(shortcut.metaKey, event.metaKey) &&
+    (shortcut.primaryKey ||
+      (matchesModifier(shortcut.ctrlKey, event.ctrlKey) &&
+        matchesModifier(shortcut.metaKey, event.metaKey))) &&
     matchesModifier(shortcut.shiftKey, event.shiftKey) &&
     matchesModifier(shortcut.altKey, event.altKey)
   );

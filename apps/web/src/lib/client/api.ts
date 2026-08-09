@@ -1,6 +1,28 @@
 import type { FileItem, FolderItem } from "@/types";
 import type { CreateConversion, StorageItem, TrashItem } from "./types";
 import config from "@/config";
+import {
+  normalizeApiDate,
+  normalizeFileItem,
+  normalizeFolderItem,
+  normalizeStorageItem,
+  normalizeTrashItem,
+  type FileItemPayload,
+  type FolderItemPayload,
+  type SerializedDate,
+  type StorageItemPayload,
+  type TrashItemPayload,
+} from "./normalizers";
+
+export class HttpError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
 
 export async function createFolder(
   name: string,
@@ -18,7 +40,8 @@ export async function createFolder(
     throw new Error("Failed to create folder");
   }
 
-  return response.json();
+  const data = (await response.json()) as FolderItemPayload;
+  return normalizeFolderItem(data);
 }
 
 export type FolderContentResponse = {
@@ -35,7 +58,15 @@ export async function getFolderContent(
     throw new Error("Failed to fetch folder children");
   }
 
-  return response.json();
+  const data = (await response.json()) as {
+    folders: FolderItemPayload[];
+    files: FileItemPayload[];
+  };
+
+  return {
+    folders: data.folders.map(normalizeFolderItem),
+    files: data.files.map(normalizeFileItem),
+  };
 }
 
 export async function uploadFiles(
@@ -55,7 +86,8 @@ export async function uploadFiles(
     throw new Error("Failed to upload files");
   }
 
-  return response.json();
+  const data = (await response.json()) as FileItemPayload[];
+  return data.map(normalizeFileItem);
 }
 
 export function getFileDownloadUrl(fileId: string) {
@@ -124,8 +156,11 @@ export type DownloadJobResponse = {
 
 export async function getDownloadJob(
   jobId: string,
+  signal?: AbortSignal,
 ): Promise<DownloadJobResponse> {
-  const response = await fetch(`${config.api.url}/downloads/${jobId}`);
+  const response = await fetch(`${config.api.url}/downloads/${jobId}`, {
+    signal,
+  });
 
   if (!response.ok) {
     throw new Error("Failed to fetch download job");
@@ -150,7 +185,8 @@ export async function renameFile(
     throw new Error("Failed to rename file");
   }
 
-  return response.json();
+  const data = (await response.json()) as FileItemPayload;
+  return normalizeFileItem(data);
 }
 
 export async function renameFolder(
@@ -169,7 +205,8 @@ export async function renameFolder(
     throw new Error("Failed to rename folder");
   }
 
-  return response.json();
+  const data = (await response.json()) as FolderItemPayload;
+  return normalizeFolderItem(data);
 }
 
 export async function deleteFile(fileId: string): Promise<void> {
@@ -198,14 +235,15 @@ export type SearchResult = {
 
 export async function searchItems(query: string): Promise<SearchResult> {
   const response = await fetch(
-    `${config.api.url}/storage/search?query=${query}`,
+    `${config.api.url}/storage/search?query=${encodeURIComponent(query)}`,
   );
 
   if (!response.ok) {
     throw new Error("Failed to search items");
   }
 
-  return response.json();
+  const data = (await response.json()) as { items: StorageItemPayload[] };
+  return { items: data.items.map(normalizeStorageItem) };
 }
 
 export type FolderResponse = {
@@ -218,14 +256,23 @@ export type FolderResponse = {
   createdAt: Date;
 };
 
-export async function getFolder(folderId: string): Promise<FolderResponse> {
-  const response = await fetch(`${config.api.url}/folders/${folderId}`);
+export async function getFolder(
+  folderId: string,
+  signal?: AbortSignal,
+): Promise<FolderResponse> {
+  const response = await fetch(`${config.api.url}/folders/${folderId}`, {
+    signal,
+  });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch folder");
+    throw new HttpError("Failed to fetch folder", response.status);
   }
 
-  return response.json();
+  const data = (await response.json()) as Omit<FolderResponse, "createdAt"> & {
+    createdAt: SerializedDate;
+  };
+
+  return { ...data, createdAt: normalizeApiDate(data.createdAt) };
 }
 
 export type FileResponse = {
@@ -240,14 +287,21 @@ export type FileResponse = {
   createdAt: Date;
 };
 
-export async function getFileById(fileId: string): Promise<FileResponse> {
-  const response = await fetch(`${config.api.url}/files/${fileId}`);
+export async function getFileById(
+  fileId: string,
+  signal?: AbortSignal,
+): Promise<FileResponse> {
+  const response = await fetch(`${config.api.url}/files/${fileId}`, { signal });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch file");
+    throw new HttpError("Failed to fetch file", response.status);
   }
 
-  return response.json();
+  const data = (await response.json()) as Omit<FileResponse, "createdAt"> & {
+    createdAt: SerializedDate;
+  };
+
+  return { ...data, createdAt: normalizeApiDate(data.createdAt) };
 }
 
 export function getFileRawUrl(fileId: string) {
@@ -269,7 +323,8 @@ export async function getTrashContent(): Promise<TrashContentResponse> {
     throw new Error("Failed to fetch trash");
   }
 
-  return response.json();
+  const data = (await response.json()) as { items: TrashItemPayload[] };
+  return { items: data.items.map(normalizeTrashItem) };
 }
 
 export async function restoreTrashItem(
