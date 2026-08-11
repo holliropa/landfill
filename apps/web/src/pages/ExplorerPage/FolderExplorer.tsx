@@ -1,3 +1,4 @@
+import { ConversionDialog } from "@/components/ConversionDialog/ConversionDialog.tsx";
 import {
   Explorer,
   type ExplorerItem,
@@ -11,7 +12,7 @@ import {
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
-import { useId, useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 
 const toolbarCommandIds = [
   "rename",
@@ -24,6 +25,7 @@ const contextMenuCommandIds = [
   "rename",
   "download",
   "details",
+  "convert",
   "moveToTrash",
 ] as const;
 const viewerCommandIds = ["download", "moveToTrash"] as const;
@@ -45,75 +47,94 @@ export function FolderExplorer({
   isLoading?: boolean;
   isError?: boolean;
 }) {
+  const [conversionFile, setConversionFile] = useState<ExplorerItem | null>(
+    null,
+  );
   const controller = useExplorerController({ items });
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
   const openFolder = useFolderNavigation();
   const commands = useMemo(
-    () => createStorageExplorerCommands({ openFolder, storage }),
+    () =>
+      createStorageExplorerCommands({
+        openFolder,
+        openConversion: setConversionFile,
+        storage,
+      }),
     [openFolder, storage],
   );
   const detailsTitleId = useId();
 
+  console.log(commands);
+
   return (
-    <Explorer controller={controller} commands={commands}>
-      <Explorer.KeyboardController />
+    <>
+      <Explorer controller={controller} commands={commands}>
+        <Explorer.KeyboardController />
 
-      <Explorer.Shell>
-        <Explorer.Toolbar>
-          <Explorer.SelectionSummary />
-          <Explorer.ActionGroup surface="toolbar" ids={toolbarCommandIds} />
-        </Explorer.Toolbar>
+        <Explorer.Shell>
+          <Explorer.Toolbar>
+            <Explorer.SelectionSummary />
+            <Explorer.ActionGroup surface="toolbar" ids={toolbarCommandIds} />
+          </Explorer.Toolbar>
 
-        <Explorer.Workspace>
-          <Explorer.Content>
-            <FolderUploadDropZone folderId={folderId}>
-              <Explorer.List
-                ariaLabel="Folder contents"
-                emptyState={{
-                  title: "This folder is empty",
-                  description:
-                    "Drop files here, or use the folder controls to upload files or create a folder.",
-                }}
-                errorState={{
-                  title: "Could not load this folder",
-                  description: "Check that the API is running, then try again.",
-                }}
-                isLoading={isLoading}
-                isError={isError}
-              />
-            </FolderUploadDropZone>
-          </Explorer.Content>
+          <Explorer.Workspace>
+            <Explorer.Content>
+              <FolderUploadDropZone folderId={folderId}>
+                <Explorer.List
+                  ariaLabel="Folder contents"
+                  emptyState={{
+                    title: "This folder is empty",
+                    description:
+                      "Drop files here, or use the folder controls to upload files or create a folder.",
+                  }}
+                  errorState={{
+                    title: "Could not load this folder",
+                    description:
+                      "Check that the API is running, then try again.",
+                  }}
+                  isLoading={isLoading}
+                  isError={isError}
+                />
+              </FolderUploadDropZone>
+            </Explorer.Content>
 
-          <Explorer.DetailsPanel ariaLabelledBy={detailsTitleId}>
-            {(runtime) => (
-              <StorageDetailsView
-                target={getStorageDetailsTarget({
-                  folderId,
-                  selectedItems: runtime.selectedItems,
-                })}
-                onClose={runtime.closeDetails}
-                titleId={detailsTitleId}
-                actions={
-                  runtime.targetItems.length > 0 ? (
-                    <Explorer.ActionGroup
-                      surface="details"
-                      ids={detailsCommandIds}
-                      targetItems={runtime.targetItems}
-                      size="small"
-                    />
-                  ) : undefined
-                }
-              />
-            )}
-          </Explorer.DetailsPanel>
-        </Explorer.Workspace>
+            <Explorer.DetailsPanel ariaLabelledBy={detailsTitleId}>
+              {(runtime) => (
+                <StorageDetailsView
+                  target={getStorageDetailsTarget({
+                    folderId,
+                    selectedItems: runtime.selectedItems,
+                  })}
+                  onClose={runtime.closeDetails}
+                  titleId={detailsTitleId}
+                  actions={
+                    runtime.targetItems.length > 0 ? (
+                      <Explorer.ActionGroup
+                        surface="details"
+                        ids={detailsCommandIds}
+                        targetItems={runtime.targetItems}
+                        size="small"
+                      />
+                    ) : undefined
+                  }
+                />
+              )}
+            </Explorer.DetailsPanel>
+          </Explorer.Workspace>
 
-        <Explorer.ContextMenu ids={contextMenuCommandIds} />
-      </Explorer.Shell>
+          <Explorer.ContextMenu ids={contextMenuCommandIds} />
+        </Explorer.Shell>
 
-      <Explorer.FileViewer actionIds={viewerCommandIds} />
-    </Explorer>
+        <Explorer.FileViewer actionIds={viewerCommandIds} />
+      </Explorer>
+
+      <ConversionDialog
+        file={conversionFile}
+        open={conversionFile !== null}
+        onClose={() => setConversionFile(null)}
+      />
+    </>
   );
 }

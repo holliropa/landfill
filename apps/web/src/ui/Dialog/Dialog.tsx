@@ -1,10 +1,10 @@
-import styles from "./Dialog.module.css";
 import React, { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
+import styles from "./Dialog.module.css";
 
 export type DialogProps = {
   open: boolean;
-  title: string;
+  title: React.ReactNode;
   description?: string;
   children?: React.ReactNode;
   footer?: React.ReactNode;

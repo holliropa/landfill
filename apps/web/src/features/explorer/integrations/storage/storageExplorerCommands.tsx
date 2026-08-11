@@ -6,6 +6,7 @@ import type {
 import { SpinnerIcon } from "@/ui/SpinnerIcon";
 import {
   ArchiveRestoreIcon,
+  ArrowLeftRight,
   DownloadIcon,
   ExternalLinkIcon,
   FileEditIcon,
@@ -17,11 +18,13 @@ import type { StorageItemActions } from "./useStorageItemActions";
 
 type StorageExplorerCommandParams = {
   openFolder: (item: ExplorerItem) => void;
+  openConversion: (item: ExplorerItem) => void;
   storage: StorageItemActions;
 };
 
 export function createStorageExplorerCommands({
   openFolder,
+  openConversion,
   storage,
 }: StorageExplorerCommandParams): ExplorerCommand[] {
   return [
@@ -103,6 +106,26 @@ export function createStorageExplorerCommands({
         }
 
         runtime.openDetails();
+      },
+    },
+    {
+      id: "convert",
+      label: "Convert",
+      icon: <ArrowLeftRight size={16} />,
+      surfaces: ["toolbar", "context-menu"],
+      order: 50,
+      isDisabled: (runtime) => {
+        return runtime.targetItems.length > 1;
+      },
+      isVisible: (runtime) => {
+        return runtime.targetItems.every((item) => item.kind === "file");
+      },
+      run: (runtime) => {
+        const item = runtime.targetItems[0];
+
+        if (!item || item.kind !== "file") return;
+
+        openConversion(item);
       },
     },
     {
