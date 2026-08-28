@@ -2,11 +2,9 @@
 import { mkdirSync } from "fs";
 import path from "path";
 
-const { DATA_DIR, HOST, PORT, REDIS_URL } = process.env;
+const { DATA_DIR, HOST, PORT } = process.env;
 
-const dataDir = DATA_DIR
-  ? path.resolve(DATA_DIR)
-  : process.cwd();
+const dataDir = DATA_DIR ? path.resolve(DATA_DIR) : process.cwd();
 const databaseDir = path.resolve(dataDir, "database");
 const databasePath = path.join(databaseDir, "main.db");
 
@@ -26,7 +24,7 @@ for (const dir of [
 
 export default {
   server: {
-    host: HOST ?? "0.0.0.0",
+    host: HOST ?? "127.0.0.1",
     port: Number(PORT ?? 3000),
   },
 
@@ -41,9 +39,5 @@ export default {
   database: {
     path: databasePath,
     url: `file:${databasePath}`,
-  },
-
-  redis: {
-    url: REDIS_URL ?? "redis://localhost:6379",
   },
 } as const;

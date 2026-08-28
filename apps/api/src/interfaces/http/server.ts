@@ -1,58 +1,51 @@
-import { cleanupExpiredJobs } from "@/application/downloads/cleanup-expired-jobs";
+import { resumeInterruptedArchiveJobs } from "@/application/downloads/archive-job-runner";
+import { startDownloadMaintenance } from "@/application/downloads/download-maintenance";
 import config from "@/config";
 import "@/infrastructure/db";
-import conversionRoutes from "@/interfaces/http/conversions/conversion.routes";
-import converterRoutes from "@/interfaces/http/converters/converter.routes";
-import downloadRoutes from "@/interfaces/http/downloads/download.routes";
-import fileRoutes from "@/interfaces/http/files/file.routes";
-import folderRoutes from "@/interfaces/http/folders/folder.routes";
-import storageRoutes from "@/interfaces/http/search/storage.routes";
-import trashRoutes from "@/interfaces/http/trash/trash.routes";
-import { archiveQueue } from "@/jobs/archive/queue";
-import { conversionQueue } from "@/jobs/conversion/queue";
-import { createBullBoard } from "@bull-board/api";
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { ExpressAdapter } from "@bull-board/express";
-import cors from "cors";
-import express from "express";
+import { createApp } from "@/interfaces/http/app";
+import { pathToFileURL } from "node:url";
 
-const app = express();
+export async function startServer() {
+  const app = createApp();
+  const { host, port } = config.server;
 
-const bullBoardAdapter = new ExpressAdapter();
-bullBoardAdapter.setBasePath("/api/admin/queues");
+  await resumeInterruptedArchiveJobs();
+  const stopDownloadMaintenance = startDownloadMaintenance();
 
-createBullBoard({
-  queues: [new BullMQAdapter(conversionQueue), new BullMQAdapter(archiveQueue)],
-  serverAdapter: bullBoardAdapter,
-});
+  const server = app.listen(port, host, () => {
+    console.log(`Landfill API listening on http://${host}:${port}`);
+  });
 
-const host = config.server.host;
-const port = config.server.port;
+  let shuttingDown = false;
 
-app.use(cors());
-app.use(express.json());
+  const shutdown = (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
 
-app.use("/api/admin/queues", bullBoardAdapter.getRouter() );
-app.use("/api/files", fileRoutes);
-app.use("/api/folders", folderRoutes);
-app.use("/api/downloads", downloadRoutes);
-app.use("/api/storage", storageRoutes);
-app.use("/api/trash", trashRoutes);
-app.use("/api/converters", converterRoutes);
-app.use("/api/conversions", conversionRoutes);
+    console.log(`[Server] Received ${signal}; shutting down...`);
+    stopDownloadMaintenance();
 
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
-});
+    server.close((error) => {
+      if (error) {
+        console.error("[Server] Shutdown failed:", error);
+        process.exitCode = 1;
+      }
+    });
+  };
 
-void cleanupExpiredJobs();
-setInterval(
-  () => {
-    void cleanupExpiredJobs();
-  },
-  1000 * 60 * 10,
-);
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
 
-app.listen(port, host, () => {
-  console.log(`API listening on http://${host}:${port}`);
-});
+  return server;
+}
+
+const isEntrypoint =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isEntrypoint) {
+  void startServer().catch((error) => {
+    console.error("[Server] Startup failed:", error);
+    process.exitCode = 1;
+  });
+}

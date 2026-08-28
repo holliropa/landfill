@@ -1,41 +1,35 @@
 {
   "name": "@landfill/api",
-  "version": "0.0.2",
+  "version": "0.1.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "tsx --watch --watch-path src src/interfaces/http/server.ts",
-    "dev:api": "tsx --watch --watch-path src src/interfaces/http/server.ts",
-    "dev:worker": "tsx --watch --watch-path src src/worker/index.ts",
-    "build": "esbuild src/interfaces/http/server.ts src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outbase=src --outdir=dist",
+    "build": "esbuild src/interfaces/http/server.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outbase=src --outdir=dist",
     "start": "node dist/interfaces/http/server.js",
-    "start:worker": "node dist/worker/index.js",
     "check-types": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "npm run build --workspace @landfill/db",
+    "test": "tsx --test src/interfaces/http/api.smoke.test.ts"
   },
   "keywords": [],
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "@bull-board/api": "^8.5.0",
-    "@bull-board/express": "^8.5.0",
     "@landfill/db": "*",
-    "archiver": "^7.0.1",
-    "bullmq": "^5.80.2",
-    "cors": "^2.8.6",
+    "archiver": "^8.0.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "multer": "2.1.1",
-    "sharp": "^0.34.5"
+    "multer": "^2.3.0",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.5",
-    "@types/archiver": "^7.0.0",
-    "@types/cors": "^2.8.19",
+    "@types/archiver": "^8.0.0",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.3.3",
-    "esbuild": "^0.27.3",
-    "tsx": "^4.21.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   }
 }

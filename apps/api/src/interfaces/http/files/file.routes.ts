@@ -1,5 +1,6 @@
 ﻿import { Router } from "express";
 import multer from "multer";
+import { randomUUID } from "node:crypto";
 import {
   deleteFileHandler,
   downloadFileHandler,
@@ -15,7 +16,7 @@ const router = Router();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, config.storage.uploadsDir),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+  filename: (_req, _file, cb) => cb(null, randomUUID()),
 });
 
 const upload = multer({ storage });

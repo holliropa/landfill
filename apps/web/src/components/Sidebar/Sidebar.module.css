@@ -1,72 +1,118 @@
 ﻿.sidebarContainer {
-    flex-shrink: 0;
-    background: var(--surface);
-    transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--divider);
+  transition:
+    width 0.3s ease-in-out,
+    padding 0.3s ease-in-out;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .open {
-    width: 220px;
+  width: 220px;
 }
 
 .collapsed {
-    width: 64px;
+  width: 64px;
 }
 
 .navContent {
-    padding: 80px 12px 40px 12px;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 12px;
+  padding: 20px 12px 24px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .navItem {
-    display: flex;
-    align-items: center;
-    border-radius: 8px;
-    padding: 8px 0;
-    transition: background-color 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background-color 0.2s ease;
 }
 
 .navItem:hover {
-    background-color: var(--surface-hover);
+  background-color: var(--surface-hover);
+}
+
+.navItem:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+
+.active {
+  background-color: var(--surface-selected);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  gap: 8px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text);
+}
+
+.brandName {
+  display: block;
+  overflow: hidden;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.sidebarFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
 }
 
 .icon {
-    min-width: 40px;
-    text-align: center;
-    display: flex;
-    justify-content: center;
+  min-width: 40px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
 .textWrapper {
-    display: grid;
-    transition: grid-template-columns 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    align-items: center;
+  display: grid;
+  transition:
+    grid-template-columns 0.3s ease-in-out,
+    opacity 0.3s ease-in-out;
+  align-items: center;
 
-    overflow: hidden;
-    min-width: 0;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .textOpen {
-    grid-template-columns: 1fr;
-    opacity: 1;
+  grid-template-columns: 1fr;
+  opacity: 1;
 }
 
 .textClosed {
-    grid-template-columns: 0fr;
-    opacity: 0;
+  grid-template-columns: 0fr;
+  opacity: 0;
 }
 
 .textInner {
-    overflow: hidden;
-    white-space: nowrap;
-    font-size: 18px;
-    font-weight: 400;
-    color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text);
 
-    min-width: 0;
+  min-width: 0;
 }

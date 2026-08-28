@@ -1,77 +1,91 @@
 # Landfill
 
-Landfill is a local-first file storage app for home and small local network use.
-It is built as a TypeScript npm workspaces monorepo with a React web client, an
-Express API, SQLite metadata storage, and disk-backed file storage.
+Landfill is a small, self-hosted file drop and browser. It gives one person—or
+devices on a trusted home network—one place to upload, organize, preview, find,
+and retrieve files through a browser.
 
-The project is currently a development-stage local file manager. It already
-supports browsing folders, uploading files, searching, downloading individual
-files, creating archive downloads, viewing basic item details, and generating
-image thumbnails.
+![Landfill file explorer](docs/landfill-explorer.png)
 
-## Current State
+## What it does
 
-Landfill currently runs as two development services:
+- Upload multiple files or drag them directly into a folder.
+- Create and browse nested folders.
+- Search files and folders by name.
+- Preview images, PDFs, audio, and video in the browser.
+- Rename files and folders.
+- Download one file directly or prepare a ZIP from several items or folders.
+- Move items to trash, restore them, or delete them permanently.
+- Store metadata in SQLite and file contents on disk under one data directory.
 
-```txt
-apps/web  -> Vite React client
-apps/api  -> Express API
+Landfill deliberately targets a small single-instance installation. It is not
+a Dropbox replacement, collaboration suite, or internet-facing storage server.
+
+## Quick start with Docker
+
+Requirements: Docker with Compose support.
+
+```sh
+docker compose up --build
 ```
 
-The API listens on `http://localhost:3000` and exposes routes under `/api`.
-The web app is served by Vite, usually on `http://localhost:5173`.
+Open <http://127.0.0.1:8080>. The database and uploaded files persist in the
+`landfill-api` Docker volume when the containers stop.
 
-In development, the web client calls same-origin `/api` routes. With
-`API_PROXY_TARGET` configured, Vite proxies those requests to the Express API on
-`http://localhost:3000`.
+To use another local port:
 
-## Current Features
-
-- Folder explorer with root and nested folders.
-- File uploads through the browser.
-- File and folder search.
-- File downloads.
-- Multi-item archive downloads.
-- Basic file and folder details.
-- File renaming and deletion.
-- Folder creation, renaming, and deletion.
-- Image thumbnail generation through the API.
-- Raw file streaming for browser previews.
-- SQLite-backed metadata.
-- Disk-backed uploaded file storage.
-- Automatic database initialization and migrations at API startup.
-
-## Current Architecture
-
-```txt
-landfill/
-  apps/
-    web/      React, Vite, React Router, TanStack Query
-    api/      Express, Multer, Sharp, Archiver
-  packages/
-    db/       Drizzle schema, migrations, SQLite initialization
+```sh
+LANDFILL_PORT=9000 docker compose up --build
 ```
 
-The web client owns the browser experience and keeps server state in TanStack
-Query. Folder content queries use `folderKeys.content(folderId)`, and mutations
-invalidate affected folder data after create, upload, rename, and delete
-operations.
+PowerShell:
 
-The API owns persistence and file processing:
+```powershell
+$env:LANDFILL_PORT = "9000"
+docker compose up --build
+```
 
-- Folder and file metadata live in SQLite through Drizzle models.
-- Uploaded files are stored on disk.
-- The database is initialized through `@landfill/db`.
-- Drizzle migrations are bundled in `packages/db`.
-- Thumbnail requests are generated from the stored file.
-- Archive download jobs create temporary archive files that can be polled and
-  downloaded when ready.
+Stop Landfill without deleting its data:
 
-## Current Data Layout
+```sh
+docker compose down
+```
 
-The API uses `DATA_DIR` as the root for application data.
+Do not add `-v` unless you intend to permanently delete Landfill's database and
+stored files.
 
-```txt
+### Upgrading from v0.0.2
+
+Back up the `landfill-api` volume before upgrading. Then pull the new version
+and replace the old API, worker, Redis, and proxy containers:
+
+```sh
+docker compose down --remove-orphans
+docker compose up --build -d --remove-orphans
+```
+
+Do not add `-v`: v0.1 reuses the existing `landfill-api` volume, so files and
+database records remain available. The old Redis volume is no longer used.
+
+Version 0.1 also changes the default public binding from every network
+interface to `127.0.0.1`. Trusted-LAN installations must explicitly set
+`LANDFILL_BIND_ADDRESS=0.0.0.0` as described below.
+
+## Security model
+
+Landfill v0.1 has no built-in authentication. Docker therefore binds to
+`127.0.0.1` by default and is only reachable from the host machine.
+
+For an explicitly trusted private network, set `LANDFILL_BIND_ADDRESS=0.0.0.0`
+before starting Compose. Every device that can reach that port will be able to
+upload, rename, download, trash, restore, and permanently delete files. Do not
+expose Landfill directly to the public internet. Use an authenticated private
+network or an authentication-capable reverse proxy if remote access is needed.
+
+## Data and backups
+
+The API stores all mutable state below `DATA_DIR`:
+
+```text
 DATA_DIR/
   database/
     main.db
@@ -82,454 +96,87 @@ DATA_DIR/
     downloads/
 ```
 
-The database stores metadata. The uploaded files themselves live in
-`storage/uploads`. Generated archive downloads live in `storage/downloads`.
+For a consistent backup, stop Landfill and copy the complete data directory.
+Restore by putting that directory back in the same location before starting the
+same or a newer Landfill version.
 
-SQLite is opened in WAL mode for better durability and local concurrency.
+For Docker installations, archive the named volume while the containers are
+stopped. Uploaded files and the SQLite database must always be backed up and
+restored together.
 
-## Requirements
+## Local development
 
-- Node.js 18 or newer.
-- npm 10.9.2 or compatible.
-
-## Setup
-
-Install dependencies from the repository root:
+Requirements: Node.js 22.12 or newer and npm 10.9.2 or compatible.
 
 ```sh
-npm install
+npm ci
 ```
 
-Create or update `apps/api/.env`:
+Copy the example environment files:
 
-```sh
-DATA_DIR="./.landfill"
-HOST="0.0.0.0"
-PORT="3000"
+```text
+apps/api/.env.example -> apps/api/.env
+apps/web/.env.example -> apps/web/.env
 ```
 
-The API creates the configured data directories on startup and initializes the
-SQLite database automatically.
-
-Create `apps/web/.env` for web and Vite development-server configuration:
-
-```sh
-API_PROXY_TARGET="http://localhost:3000"
-```
-
-The React app always calls the API through the same-origin `/api` path.
-`API_PROXY_TARGET` is optional and only used by the Vite development server. If
-it is set, Vite proxies `/api` requests to the API target. If it is not set, the
-web development server does not proxy API requests.
-
-## Development
-
-Run both apps through Turbo:
+Then run both development services:
 
 ```sh
 npm run dev
 ```
 
-Open the web app:
+Open <http://localhost:5173>. Vite proxies same-origin `/api` requests to the
+API target configured in `apps/web/.env`.
 
-```txt
-http://localhost:5173
-```
-
-The API is available at:
-
-```txt
-http://localhost:3000/api
-```
-
-When `API_PROXY_TARGET` is set, the Vite development server proxies web requests
-from `/api` to the API server. This lets frontend code use the same `/api` paths
-that a production reverse proxy can expose later.
-
-To run the web app through the same-origin dev proxy against an API on another
-port or host, change `API_PROXY_TARGET` in `apps/web/.env` or set it when
-starting the web workspace:
+Useful checks:
 
 ```sh
-API_PROXY_TARGET="http://localhost:3001" npm run dev --workspace @landfill/web
+npm test
+npm run check-types
+npm run lint
+npm run build
 ```
 
-## Docker
+The API smoke test creates an isolated temporary data directory and exercises
+health, folder creation, upload, search, rename, archive download, trash, and
+restore through real HTTP requests.
 
-Landfill has an initial Docker Compose setup with two services:
+## Architecture
 
-```txt
-api     -> Express API, SQLite database, uploaded files
-proxy   -> Caddy, built React app, /api routing to the API service
+```text
+Browser
+  -> React + Vite static client
+  -> same-origin /api
+  -> Express API
+       -> SQLite metadata
+       -> disk-backed uploads and generated ZIP files
 ```
 
-Start the Docker deployment from the repository root:
+The npm workspace layout is:
 
-```sh
-docker compose up --build
+```text
+apps/web      React, React Router, TanStack Query
+apps/api      Express, Multer, Sharp, Archiver
+packages/db   Drizzle schema and bundled SQLite migrations
+infra/caddy   Production static hosting and /api reverse proxy
 ```
 
-Open the app:
+Archive downloads run one at a time inside the API process. Their inputs and
+status live in SQLite, allowing pending work to resume after a restart without
+requiring a separate queue service.
 
-```txt
-http://localhost:8080
-```
+## Current limitations
 
-The API is routed through the same public origin:
+- No authentication or user accounts.
+- No public-internet deployment support.
+- No sharing links or per-folder permissions.
+- No storage quotas or duplicate-content detection.
+- Docker Compose is the supported packaged installation; native installers are
+  not currently planned for v0.1.
 
-```txt
-http://localhost:8080/api
-```
+The next release work is limited to hardening the core workflow: better failure
+diagnostics, upgrade fixtures, and broader automated browser coverage.
 
-Health check:
+## License
 
-```txt
-http://localhost:8080/api/health
-```
-
-Stop the containers:
-
-```sh
-docker compose down
-```
-
-Application data is stored in the `landfill-data` Docker volume and mounted into
-the API container at `/data`.
-
-```txt
-/data/database/main.db
-/data/storage/uploads/
-/data/storage/downloads/
-```
-
-Stopping containers with `docker compose down` keeps the volume. To remove the
-containers and delete the stored Landfill data:
-
-```sh
-docker compose down -v
-```
-
-Use `-v` carefully. It deletes the Docker volume that contains the SQLite
-database and uploaded files.
-
-## Scripts
-
-- `npm run dev`: start all workspace development servers.
-- `npm run build`: build database, web, and API workspace outputs.
-- `npm run lint`: run workspace lint tasks.
-- `npm run check-types`: run TypeScript checks for the web and API workspaces.
-- `npm run format`: format TypeScript, TSX, and Markdown files with Prettier.
-
-Workspace scripts:
-
-- `npm run check-types --workspace @landfill/web`: `tsc -b --noEmit`.
-- `npm run check-types --workspace @landfill/api`: `tsc --noEmit`.
-- `npm run lint --workspace @landfill/web`: ESLint for the web app.
-
-## Current Limitations
-
-Landfill is not production-packaged yet.
-
-Current limitations:
-
-- The web app and API run as separate development services.
-- Docker Compose exists, but images are not optimized yet.
-- Docker images are not published to a registry yet.
-- There is no native installer yet.
-- There is no authentication yet.
-- Backup and restore behavior is only partially documented.
-
-These limitations are part of the next delivery work, not blockers for local
-development.
-
----
-
-# Future Direction
-
-The long-term shape of Landfill is a self-contained home storage appliance: one
-install, one local server, one data directory, and browser access from devices on
-the same network.
-
-```txt
-Landfill runtime
-  web/static service
-  Express API service
-  router/proxy for / and /api
-  one public HTTP port
-  one DATA_DIR for database and files
-```
-
-Example LAN access:
-
-```txt
-http://landfill.local
-http://192.168.1.50
-```
-
-## Delivery Vision
-
-Landfill will support multiple delivery paths that all expose the same public
-URL shape.
-
-```txt
-Same public app shape
-  -> Docker Compose
-  -> Native installer/package
-  -> Raw npm install
-```
-
-The goal is to avoid separate browser-facing behavior for each installation
-type. Docker, native packages, and npm installs should all expose:
-
-```txt
-/      -> web app
-/api   -> API
-```
-
-Internally, the web service and API service can still run on separate ports.
-The mapping belongs to the development server, reverse proxy, or package
-runtime, not to the frontend code.
-
-## Planned Delivery Paths
-
-### 1. Docker Compose
-
-Docker Compose is the primary delivery path for home servers, NAS devices, mini
-PCs, and other always-on machines.
-
-The current Compose setup uses two services:
-
-```yaml
-services:
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    volumes:
-      - landfill-data:/data
-    environment:
-      DATA_DIR: /data
-      HOST: 0.0.0.0
-      PORT: 3000
-
-  proxy:
-    build:
-      context: .
-      dockerfile: infra/caddy/Dockerfile
-    ports:
-      - "8080:80"
-    depends_on:
-      api:
-        condition: service_healthy
-```
-
-The public routing model is:
-
-```txt
-/      -> web service
-/api   -> API service
-```
-
-The `proxy` service runs Caddy and serves the built React app from `/srv/web`.
-It also routes `/api` requests to the `api` service.
-
-The API service owns persistent data through the `landfill-data` Docker volume:
-
-```yaml
-services:
-  api:
-    volumes:
-      - landfill-data:/data
-    environment:
-      DATA_DIR: /data
-```
-
-The default Docker install will not require a separate Postgres, MySQL, or Redis
-container.
-
-A future Docker layout may split the built web app and reverse proxy into
-separate services, but the current two-container setup is the first supported
-production-shaped runtime.
-
-### 2. Native Installer / Package
-
-Native installers are planned as the friendlier desktop/home-user packaging
-option. They will use the same web, API, and routing model with OS-specific data
-locations.
-
-Possible data directory defaults:
-
-```txt
-Windows:
-  %ProgramData%\Landfill
-  or %LOCALAPPDATA%\Landfill
-
-macOS:
-  ~/Library/Application Support/Landfill
-  or /Library/Application Support/Landfill
-
-Linux:
-  ~/.local/share/landfill
-  or /var/lib/landfill for service installs
-```
-
-The native package should not require users to install or manage a separate
-database server.
-
-### 3. Raw npm Install
-
-Raw npm install remains useful for development, contributors, and advanced
-manual installs.
-
-This path gives the user direct control over:
-
-- Node.js version.
-- Native dependency installation.
-- Ports.
-- Startup behavior.
-- Updates.
-- Data location.
-
-It is the most transparent path, but also the least polished for normal users.
-
-## Database Direction
-
-SQLite remains the default database across all delivery paths.
-
-Landfill is a local-first file storage app, so an embedded database fits the
-product better than requiring a separate database server:
-
-- no database service to install or maintain
-- one data directory to back up
-- works in Docker, native installers, and npm installs
-- startup migrations are simple
-- metadata stays beside the uploaded files
-- suitable for folders, files, download jobs, settings, users, and sessions
-
-Using SQLite everywhere also keeps migrations, backup behavior, and update
-testing consistent. Docker deployments should not use a different default
-database than native installs.
-
-SQLite usage assumptions:
-
-- The database should live on a local disk.
-- The database and uploaded files should be backed up together.
-- Landfill is aimed at home and small local network use.
-- Enterprise-scale multi-user storage is outside the default target.
-
-## Planned Production Runtime
-
-The current Docker runtime already provides the first packaged service layout:
-
-- `apps/web` is built into static files.
-- `apps/api` is built into `dist/index.js`.
-- Caddy serves the built web UI.
-- Caddy routes `/api` requests to the API service.
-- The frontend uses same-origin API calls through `/api`.
-- Docker exposes one public HTTP port through the proxy.
-- The API stores mutable data under `DATA_DIR`.
-- API and proxy healthchecks are configured.
-
-Remaining production-runtime work is focused on hardening rather than proving
-the shape:
-
-- Optimize Docker image size and dependency installation.
-- Publish versioned images.
-- Add release and update instructions.
-- Add a complete backup and restore workflow.
-- Test LAN access from another device.
-
-## Planned Security Work
-
-Authentication is required before Landfill is suitable for normal LAN use.
-Without it, anyone on the local network can upload, download, rename, or delete
-files.
-
-Planned first version:
-
-- First-run setup.
-- Local admin account or passphrase.
-- Session-based browser login.
-- Protected API routes.
-
-Possible later additions:
-
-- Multiple local users.
-- Share links.
-- Per-folder permissions.
-- Read-only access.
-
-## Planned Backup And Restore Story
-
-Landfill's backup model is intended to be simple:
-
-```txt
-Back up DATA_DIR.
-Restore DATA_DIR.
-Start Landfill.
-```
-
-The backup documentation should explain:
-
-- what files live in `DATA_DIR`
-- how to stop the app before a clean backup
-- how to restore onto a new machine
-- how Docker volumes map to the data directory
-- how native installers choose the data directory
-- what to expect from SQLite WAL files
-
-The Docker section documents the current volume location and the difference
-between `docker compose down` and `docker compose down -v`. A fuller workflow is
-still needed for exporting, storing, and restoring backups.
-
-## Planned Upgrade Testing Flow
-
-Docker will be used as part of the development and release process to test
-stateful updates against persistent data.
-
-Planned flow:
-
-```txt
-1. Develop locally with npm/dev servers.
-2. Build a Docker image.
-3. Start it with a persistent DATA_DIR volume.
-4. Upload files and use the app like a real user.
-5. Make code, schema, or storage changes.
-6. Build the next image.
-7. Restart the container against the same DATA_DIR.
-8. Verify migrations, existing files, downloads, thumbnails, and searches.
-```
-
-This flow is especially important for changes to:
-
-- SQLite schema and migrations.
-- Physical file layout.
-- Stored file names.
-- Cleanup behavior.
-- Archive jobs.
-- Backup and restore expectations.
-
-Old `DATA_DIR` samples can be kept around and used as upgrade fixtures before
-publishing updates.
-
-## Roadmap Snapshot
-
-Near-term:
-
-- Document backup and restore.
-- Optimize Docker images.
-- Add release/update instructions.
-- Test LAN access from another device.
-
-Next:
-
-- Add first-run setup and authentication.
-- Add runtime diagnostics.
-- Publish versioned Docker images.
-
-Later:
-
-- Native installers/packages.
-- Better LAN discovery.
-- Multi-user support.
-- More advanced sharing and permissions.
+Landfill is available under the [MIT License](LICENSE).

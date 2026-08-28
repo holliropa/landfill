@@ -1,45 +1,5 @@
-﻿services:
-  redis:
-    image: redis:7.4.9-alpine
-    command:
-      - redis-server
-      - --appendonly
-      - "yes"
-      - --maxmemory-policy
-      - noeviction
-    volumes:
-      - landfill-redis:/data
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-
-  worker:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    command: npm run start:worker --workspace @landfill/api
-    environment:
-      DATA_DIR: /data
-      REDIS_URL: redis://redis:6379
-    volumes:
-      - landfill-api:/data
-    depends_on:
-      redis:
-        condition: service_healthy
-
+services:
   api:
-    healthcheck:
-      test: [
-        "CMD-SHELL",
-        "node -e \"fetch('http://localhost:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""
-      ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -47,23 +7,30 @@
       DATA_DIR: /data
       HOST: 0.0.0.0
       PORT: 3000
-      REDIS_URL: redis://redis:6379
     volumes:
       - landfill-api:/data
     expose:
       - "3000"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'node -e "fetch(''http://localhost:3000/api/health'').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   proxy:
     build:
       context: .
       dockerfile: infra/caddy/Dockerfile
     ports:
-      - "8080:80"
+      - "${LANDFILL_BIND_ADDRESS:-127.0.0.1}:${LANDFILL_PORT:-8080}:80"
     depends_on:
       api:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -q --spider http://localhost/ || exit 1" ]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -71,5 +38,3 @@
 
 volumes:
   landfill-api:
-  landfill-redis:
-

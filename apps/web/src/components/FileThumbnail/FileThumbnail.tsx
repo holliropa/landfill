@@ -6,12 +6,14 @@ import { getFileThumbnailUrl } from "@/lib/client";
 interface FileThumbnailProps {
   fileId: string;
   alt: string;
+  mimeType: string | null;
 }
 
-export function FileThumbnail({ fileId, alt }: FileThumbnailProps) {
+export function FileThumbnail({ fileId, alt, mimeType }: FileThumbnailProps) {
   const [failedFileId, setFailedFileId] = useState<string | null>(null);
 
-  const hasError = failedFileId === fileId;
+  const canShowThumbnail = mimeType?.startsWith("image/") ?? false;
+  const hasError = !canShowThumbnail || failedFileId === fileId;
 
   const thumbnailUrl = getFileThumbnailUrl(fileId);
 
@@ -25,7 +27,7 @@ export function FileThumbnail({ fileId, alt }: FileThumbnailProps) {
           className={styles.thumbnail}
         />
       ) : (
-        <FileIcon className={styles.defaultIcon} />
+        <FileIcon className={styles.defaultIcon} aria-hidden="true" />
       )}
     </div>
   );

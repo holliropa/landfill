@@ -42,7 +42,9 @@ if (migrations.length === 0) {
     process.exit(0);
   }
 
-  console.error("No Drizzle migrations found. Run `npm run db:generate` first.");
+  console.error(
+    "No Drizzle migrations found. Run `npm run db:generate` first.",
+  );
   process.exit(1);
 }
 
@@ -51,11 +53,14 @@ output += `import type { Migration } from "../run-migrations.js";\n\n`;
 output += `export const migrations: Migration[] = [\n`;
 
 for (const migration of migrations) {
-  const sql = fs.readFileSync(migration.sqlPath, "utf-8");
+  const sql = fs
+    .readFileSync(migration.sqlPath, "utf-8")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n$/, "");
 
   output += `  {\n`;
   output += `    tag: ${JSON.stringify(migration.tag)},\n`;
-  output += `    sql: ${JSON.stringify(sql)}\n`;
+  output += `    sql: ${JSON.stringify(sql)},\n`;
   output += `  },\n`;
 }
 

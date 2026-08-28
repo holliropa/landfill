@@ -26,7 +26,11 @@ export function TrashPage() {
         location: item.location,
         ThumbnailComponent:
           item.kind === "file" ? (
-            <FileThumbnail fileId={item.id} alt={item.name} />
+            <FileThumbnail
+              fileId={item.id}
+              alt={item.name}
+              mimeType={item.mimeType}
+            />
           ) : (
             <FolderIcon size={18} />
           ),

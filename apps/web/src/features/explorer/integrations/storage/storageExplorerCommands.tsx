@@ -6,7 +6,6 @@ import type {
 import { SpinnerIcon } from "@/ui/SpinnerIcon";
 import {
   ArchiveRestoreIcon,
-  ArrowLeftRight,
   DownloadIcon,
   ExternalLinkIcon,
   FileEditIcon,
@@ -18,13 +17,11 @@ import type { StorageItemActions } from "./useStorageItemActions";
 
 type StorageExplorerCommandParams = {
   openFolder: (item: ExplorerItem) => void;
-  openConversion: (item: ExplorerItem) => void;
   storage: StorageItemActions;
 };
 
 export function createStorageExplorerCommands({
   openFolder,
-  openConversion,
   storage,
 }: StorageExplorerCommandParams): ExplorerCommand[] {
   return [
@@ -63,6 +60,7 @@ export function createStorageExplorerCommands({
       surfaces: ["toolbar", "context-menu", "keyboard", "details"],
       shortcut: { key: "F2" },
       order: 20,
+      isVisible: (runtime) => runtime.targetItems.length > 0,
       isDisabled: (runtime) =>
         storage.isRenaming || runtime.targetItems.length !== 1,
       run: (runtime) => {
@@ -87,6 +85,7 @@ export function createStorageExplorerCommands({
       ],
       shortcut: { key: "d", primaryKey: true },
       order: 30,
+      isVisible: (runtime) => runtime.targetItems.length > 0,
       isDisabled: (runtime) =>
         storage.isDownloading || runtime.targetItems.length === 0,
       run: (runtime) => {
@@ -109,26 +108,6 @@ export function createStorageExplorerCommands({
       },
     },
     {
-      id: "convert",
-      label: "Convert",
-      icon: <ArrowLeftRight size={16} />,
-      surfaces: ["toolbar", "context-menu"],
-      order: 50,
-      isDisabled: (runtime) => {
-        return runtime.targetItems.length > 1;
-      },
-      isVisible: (runtime) => {
-        return runtime.targetItems.every((item) => item.kind === "file");
-      },
-      run: (runtime) => {
-        const item = runtime.targetItems[0];
-
-        if (!item || item.kind !== "file") return;
-
-        openConversion(item);
-      },
-    },
-    {
       id: "moveToTrash",
       label: "Move to trash",
       icon: () =>
@@ -147,6 +126,7 @@ export function createStorageExplorerCommands({
       shortcut: { key: "Delete" },
       order: 50,
       intent: "danger",
+      isVisible: (runtime) => runtime.targetItems.length > 0,
       isDisabled: (runtime) =>
         storage.isDeleting || runtime.targetItems.length === 0,
       run: (runtime) => {

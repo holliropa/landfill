@@ -6,7 +6,7 @@ import db, {
 import path from "path";
 import config from "@/config";
 import fs from "fs";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import { and, eq, isNull } from "drizzle-orm";
 import { getFilePath } from "@/infrastructure/filesystem/get-file-path";
 import { isFileInActiveTree } from "@/application/storage/trash-visibility";
@@ -187,7 +187,7 @@ async function writeZip(
 ) {
   await new Promise<void>((resolve, reject) => {
     const output = fs.createWriteStream(archivePath);
-    const archive = archiver("zip", { zlib: { level: 0 } });
+    const archive = new ZipArchive({ zlib: { level: 0 } });
 
     const progressUpdates: Promise<void>[] = [];
 

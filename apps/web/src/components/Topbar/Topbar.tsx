@@ -40,8 +40,8 @@ export function Topbar() {
           key={`${location.pathname}?${location.search}`}
           type="text"
           name="q"
-          placeholder="Search"
-          aria-label="Search"
+          placeholder="Search your files"
+          aria-label="Search your files"
           className={styles.searchInput}
           defaultValue={inputDefaultValue}
         />
@@ -53,6 +53,8 @@ export function Topbar() {
         style={{
           marginLeft: "auto",
         }}
+        aria-label={`Use ${theme === "light" ? "dark" : "light"} theme`}
+        title={`Use ${theme === "light" ? "dark" : "light"} theme`}
       />
     </header>
   );

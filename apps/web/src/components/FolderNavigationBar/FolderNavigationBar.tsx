@@ -112,11 +112,15 @@ export function FolderNavigationBar({ folderId }: NavigationBarProps) {
           variant="ghost"
           onClick={handleCreateFolder}
           icon={<FolderPlusIcon />}
+          aria-label="Create folder"
+          title="Create folder"
         />
         <IconButton
           variant="ghost"
           onClick={() => fileInputRef.current?.click()}
           icon={<UploadIcon />}
+          aria-label="Upload files"
+          title="Upload files"
         />
       </div>
 

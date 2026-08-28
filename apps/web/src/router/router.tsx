@@ -1,5 +1,4 @@
 ﻿import { MainLayout } from "@/layouts";
-import { ConversionsPage } from "@/pages/ConversionsPage";
 import { ExplorerPage } from "@/pages/ExplorerPage";
 import { SearchPage } from "@/pages/SearchPage";
 import { TrashPage } from "@/pages/TrashPage";
@@ -30,10 +29,6 @@ export const router = createBrowserRouter([
       {
         path: "trash",
         element: <TrashPage />,
-      },
-      {
-        path: "conversions",
-        element: <ConversionsPage />,
       },
     ],
   },

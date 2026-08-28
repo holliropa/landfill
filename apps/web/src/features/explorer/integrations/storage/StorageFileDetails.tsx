@@ -38,7 +38,11 @@ export function StorageFileDetails({
     >
       <StorageDetailsPreview>
         <DetailsPreviewBoundary fallback={fallback}>
-          <FileThumbnail fileId={details.id} alt={details.title} />
+          <FileThumbnail
+            fileId={details.id}
+            alt={details.title}
+            mimeType={details.mimeType}
+          />
         </DetailsPreviewBoundary>
       </StorageDetailsPreview>
 

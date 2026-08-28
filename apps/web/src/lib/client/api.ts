@@ -1,5 +1,5 @@
 import type { FileItem, FolderItem } from "@/types";
-import type { CreateConversion, StorageItem, TrashItem } from "./types";
+import type { StorageItem, TrashItem } from "./types";
 import config from "@/config";
 import {
   normalizeApiDate,
@@ -366,72 +366,4 @@ export async function emptyTrash(): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to empty trash");
   }
-}
-
-export type ConversionTarget = {
-  format: "jpeg" | "png" | "webp";
-  extension: string;
-  mimeType: string;
-  label: string;
-};
-
-export type ConversionTargetResponse = {
-  targets: ConversionTarget[];
-};
-
-export async function getConversionTargets(
-  fileId: string,
-): Promise<ConversionTargetResponse> {
-  const response = await fetch(
-    `${config.api.url}/converters/targets?fileId=${encodeURIComponent(fileId)}`,
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch conversion targets");
-  }
-
-  return response.json();
-}
-
-export type ConversionJobResponse = {
-  id: string;
-  status: string;
-  progress: number;
-  result: { fileId: string; name: string } | null;
-  failedReason: string | null;
-};
-
-export async function getConversionJob(
-  id: string,
-): Promise<ConversionJobResponse> {
-  const response = await fetch(`${config.api.url}/conversions/${id}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch conversion job");
-  }
-
-  return response.json();
-}
-
-export type CreateConversionJobResponse = {
-  id: string;
-  status: string;
-};
-
-export async function createConversionJob(
-  input: CreateConversion,
-): Promise<CreateConversionJobResponse> {
-  const response = await fetch(`${config.api.url}/conversions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to create conversion job");
-  }
-
-  return response.json();
 }

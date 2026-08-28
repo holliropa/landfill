@@ -27,7 +27,11 @@ export function SearchPage() {
         item.kind === "folder" ? (
           <FolderIcon />
         ) : (
-          <FileThumbnail fileId={item.id} alt={item.name} />
+          <FileThumbnail
+            fileId={item.id}
+            alt={item.name}
+            mimeType={item.mimeType}
+          />
         ),
     }));
   }, [error, isLoading, searchResult]);

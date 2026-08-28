@@ -25,7 +25,11 @@ export function FileDetails({ file, onClose }: FileDetailsProps) {
       </div>
 
       <div style={{ width: "100%" }}>
-        <FileThumbnail fileId={file.id} alt={file.originalName} />
+        <FileThumbnail
+          fileId={file.id}
+          alt={file.originalName}
+          mimeType={file.mimeType}
+        />
       </div>
 
       <div style={{ padding: "12px", overflow: "auto" }}>

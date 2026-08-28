@@ -6,6 +6,7 @@ type SidebarItemProps = {
   onClick: () => void;
   Icon: ReactNode;
   label: string;
+  active?: boolean;
 };
 
 export function SidebarItem({
@@ -13,31 +14,23 @@ export function SidebarItem({
   onClick,
   Icon,
   label,
+  active = false,
 }: SidebarItemProps) {
   return (
-    <div className={styles.navItem} style={{
-      position: "relative",
-    }}>
-      <div className={styles.icon}>{Icon}</div>
+    <button
+      type="button"
+      className={`${styles.navItem} ${active ? styles.active : ""}`}
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      aria-label={isOpen ? undefined : label}
+      title={isOpen ? undefined : label}
+    >
+      <span className={styles.icon}>{Icon}</span>
       <div
         className={`${styles.textWrapper} ${isOpen ? styles.textOpen : styles.textClosed}`}
       >
         <span className={styles.textInner}>{label}</span>
       </div>
-
-      <button
-        style={{
-          position: "absolute",
-          background: "none",
-          border: "none",
-          top: "0",
-          left: "0",
-          width: "100%",
-          height: "100%",
-          cursor: "pointer",
-        }}
-        onClick={onClick}
-      />
-    </div>
+    </button>
   );
 }

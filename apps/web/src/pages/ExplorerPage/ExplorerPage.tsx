@@ -35,7 +35,13 @@ export function ExplorerPage() {
       name: file.name,
       createdAt: file.createdAt,
       size: file.size,
-      ThumbnailComponent: <FileThumbnail fileId={file.id} alt={file.name} />,
+      ThumbnailComponent: (
+        <FileThumbnail
+          fileId={file.id}
+          alt={file.name}
+          mimeType={file.mimeType}
+        />
+      ),
     }));
 
     return [...folderItems, ...fileItems];
