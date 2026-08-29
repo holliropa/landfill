@@ -14,4 +14,8 @@ export const migrations: Migration[] = [
     tag: "20260701163553_clumsy_namor",
     sql: "ALTER TABLE `files` ADD `deleted_at` integer;--> statement-breakpoint\nALTER TABLE `folders` ADD `deleted_at` integer;--> statement-breakpoint\nCREATE INDEX `files_folder_id_deleted_at_idx` ON `files` (`folder_id`,`deleted_at`);--> statement-breakpoint\nCREATE INDEX `folders_parent_folder_id_deleted_at_idx` ON `folders` (`parent_folder_id`,`deleted_at`);",
   },
+  {
+    tag: "20260829103051_awesome_tombstone",
+    sql: "CREATE TABLE `auth_sessions` (\n\t`token_hash` text PRIMARY KEY,\n\t`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,\n\t`last_seen_at` integer NOT NULL,\n\t`expires_at` integer NOT NULL,\n\t`absolute_expires_at` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE TABLE `owner_credentials` (\n\t`id` integer PRIMARY KEY,\n\t`password_hash` text NOT NULL,\n\t`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,\n\t`updated_at` integer DEFAULT (unixepoch() * 1000) NOT NULL\n);\n--> statement-breakpoint\nCREATE INDEX `auth_sessions_expires_at_idx` ON `auth_sessions` (`expires_at`);--> statement-breakpoint\nCREATE INDEX `auth_sessions_absolute_expires_at_idx` ON `auth_sessions` (`absolute_expires_at`);",
+  },
 ];

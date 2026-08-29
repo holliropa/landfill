@@ -7,6 +7,8 @@ services:
       DATA_DIR: /data
       HOST: 0.0.0.0
       PORT: 3000
+      TRUST_PROXY: 1
+      COOKIE_SECURE: auto
     volumes:
       - landfill-api:/data
     expose:

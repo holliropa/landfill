@@ -1,3 +1,5 @@
+import { startAuthMaintenance } from "@/application/auth/auth-maintenance";
+import { initializeAuthentication } from "@/application/auth/auth-service";
 import { resumeInterruptedArchiveJobs } from "@/application/downloads/archive-job-runner";
 import { startDownloadMaintenance } from "@/application/downloads/download-maintenance";
 import config from "@/config";
@@ -9,7 +11,9 @@ export async function startServer() {
   const app = createApp();
   const { host, port } = config.server;
 
+  await initializeAuthentication();
   await resumeInterruptedArchiveJobs();
+  const stopAuthMaintenance = startAuthMaintenance();
   const stopDownloadMaintenance = startDownloadMaintenance();
 
   const server = app.listen(port, host, () => {
@@ -23,6 +27,7 @@ export async function startServer() {
     shuttingDown = true;
 
     console.log(`[Server] Received ${signal}; shutting down...`);
+    stopAuthMaintenance();
     stopDownloadMaintenance();
 
     server.close((error) => {

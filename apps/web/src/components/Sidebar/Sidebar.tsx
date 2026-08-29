@@ -5,23 +5,35 @@ import {
   ChevronsRight,
   HardDrive,
   LayoutGrid,
+  LogOut,
   Trash,
 } from "lucide-react";
 import { SidebarItem } from "./SidebarItem";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
 import { useLocation, useNavigate } from "react-router-dom";
 import { paths } from "@/router";
+import { useAuth } from "@/providers";
+import { toast } from "sonner";
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const openFolder = useFolderNavigation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
   const handleGoToAllFiles = () => {
     openFolder();
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+    } catch {
+      toast.error("Could not sign out. Try again.");
+    }
   };
 
   return (
@@ -52,6 +64,12 @@ export function Sidebar() {
           label="Trash"
         />
         <div className={styles.sidebarFooter}>
+          <SidebarItem
+            onClick={() => void handleSignOut()}
+            isOpen={isOpen}
+            Icon={<LogOut size={22} />}
+            label="Sign out"
+          />
           <SidebarItem
             onClick={toggleSidebar}
             isOpen={isOpen}

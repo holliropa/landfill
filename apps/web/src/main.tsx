@@ -9,15 +9,17 @@ import "./styles/global.css";
 
 import App from "./App";
 import { ThemeProvider } from "@/lib/theme";
-import { DialogProvider } from "@/providers";
+import { AuthProvider, DialogProvider } from "@/providers";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <DialogProvider>
-          <App />
-        </DialogProvider>
+        <AuthProvider>
+          <DialogProvider>
+            <App />
+          </DialogProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,

@@ -1,8 +1,7 @@
 # Landfill
 
-Landfill is a small, self-hosted file drop and browser. It gives one person—or
-devices on a trusted home network—one place to upload, organize, preview, find,
-and retrieve files through a browser.
+Landfill is a small, self-hosted file drop and browser. It gives one person one
+place to upload, organize, preview, find, and retrieve files through a browser.
 
 ![Landfill file explorer](docs/landfill-explorer.png)
 
@@ -16,13 +15,18 @@ and retrieve files through a browser.
 - Download one file directly or prepare a ZIP from several items or folders.
 - Move items to trash, restore them, or delete them permanently.
 - Store metadata in SQLite and file contents on disk under one data directory.
+- Protect the instance with one local owner password.
 
 Landfill deliberately targets a small single-instance installation. It is not
-a Dropbox replacement, collaboration suite, or internet-facing storage server.
+a Dropbox replacement or collaboration suite.
 
 ## Quick start with Docker
 
 Requirements: Docker with Compose support.
+
+Optionally copy the root `.env.example` to `.env` to persist the published port
+and network binding. The example remains localhost-only; set
+`LANDFILL_BIND_ADDRESS=0.0.0.0` only for a trusted local network.
 
 ```sh
 docker compose up --build
@@ -30,6 +34,15 @@ docker compose up --build
 
 Open <http://127.0.0.1:8080>. The database and uploaded files persist in the
 `landfill-api` Docker volume when the containers stop.
+
+On the first start, find the one-time owner setup code in the API logs:
+
+```sh
+docker compose logs api
+```
+
+Enter that code in the browser and choose an owner password of at least 12
+characters. The code is valid only until setup succeeds or the API restarts.
 
 To use another local port:
 
@@ -53,33 +66,62 @@ docker compose down
 Do not add `-v` unless you intend to permanently delete Landfill's database and
 stored files.
 
-### Upgrading from v0.0.2
+### Upgrading from v0.1
 
 Back up the `landfill-api` volume before upgrading. Then pull the new version
-and replace the old API, worker, Redis, and proxy containers:
+and rebuild the containers:
 
 ```sh
 docker compose down --remove-orphans
 docker compose up --build -d --remove-orphans
 ```
 
-Do not add `-v`: v0.1 reuses the existing `landfill-api` volume, so files and
-database records remain available. The old Redis volume is no longer used.
-
-Version 0.1 also changes the default public binding from every network
-interface to `127.0.0.1`. Trusted-LAN installations must explicitly set
-`LANDFILL_BIND_ADDRESS=0.0.0.0` as described below.
+Do not add `-v`: v0.2 automatically migrates the existing database in the
+`landfill-api` volume and preserves its files. After the upgrade, read the
+one-time setup code from `docker compose logs api` and create the owner
+password. Existing files are not changed by owner setup.
 
 ## Security model
 
-Landfill v0.1 has no built-in authentication. Docker therefore binds to
-`127.0.0.1` by default and is only reachable from the host machine.
+Landfill v0.2 has one local owner account. There are no usernames, invitations,
+sharing accounts, or password-reset emails. The owner password is scrypt-hashed
+in SQLite. Browser sessions use random tokens; only their SHA-256 hashes are
+stored. Sessions expire after seven idle days or 30 days total.
+
+The session cookie is HttpOnly and SameSite=Strict. Landfill also rejects
+browser mutations whose `Origin` does not match the request host and throttles
+failed setup and sign-in attempts. The health endpoint and the endpoints needed
+to set up or sign in are the only public API endpoints.
+
+Docker binds to `127.0.0.1` by default. Built-in authentication protects the
+files, but the default site uses plain HTTP and does not encrypt traffic.
 
 For an explicitly trusted private network, set `LANDFILL_BIND_ADDRESS=0.0.0.0`
-before starting Compose. Every device that can reach that port will be able to
-upload, rename, download, trash, restore, and permanently delete files. Do not
-expose Landfill directly to the public internet. Use an authenticated private
-network or an authentication-capable reverse proxy if remote access is needed.
+before starting Compose. Use a private VPN or an HTTPS reverse proxy for access
+across untrusted networks; do not expose the default HTTP listener directly to
+the public internet.
+
+`TRUST_PROXY` is the number of trusted reverse-proxy hops in front of the API.
+Compose sets it to `1` for its bundled Caddy proxy. `COOKIE_SECURE=auto` marks
+cookies secure when Express sees an HTTPS request. If TLS terminates in another
+proxy and HTTPS is not forwarded all the way to Express, explicitly set
+`COOKIE_SECURE=true` and configure that proxy to send the original scheme.
+
+### Owner password recovery
+
+If the owner password is lost, reset only the credentials and sessions. Files
+and folders are not removed:
+
+```sh
+docker compose exec api npm run auth:reset --workspace @landfill/api -- --yes
+docker compose restart api
+docker compose logs api
+```
+
+The reset command is intentionally available only on the host. After the API
+restarts, use the newly printed setup code in the browser and choose a new
+password. Anyone with access to run commands inside the API container already
+has administrative access to Landfill's data.
 
 ## Data and backups
 
@@ -126,7 +168,8 @@ npm run dev
 ```
 
 Open <http://localhost:5173>. Vite proxies same-origin `/api` requests to the
-API target configured in `apps/web/.env`.
+API target configured in `apps/web/.env`. The API terminal prints the initial
+owner setup code.
 
 Useful checks:
 
@@ -138,8 +181,9 @@ npm run build
 ```
 
 The API smoke test creates an isolated temporary data directory and exercises
-health, folder creation, upload, search, rename, archive download, trash, and
-restore through real HTTP requests.
+owner setup, session security and persistence, recovery, folder creation,
+upload, search, rename, archive download, trash, and restore through real HTTP
+requests.
 
 ## Architecture
 
@@ -148,6 +192,7 @@ Browser
   -> React + Vite static client
   -> same-origin /api
   -> Express API
+       -> owner password + server-side sessions
        -> SQLite metadata
        -> disk-backed uploads and generated ZIP files
 ```
@@ -167,15 +212,12 @@ requiring a separate queue service.
 
 ## Current limitations
 
-- No authentication or user accounts.
-- No public-internet deployment support.
-- No sharing links or per-folder permissions.
+- One owner only; no multi-user accounts, sharing, or per-folder permissions.
+- No bundled TLS or direct public-internet deployment support.
+- No sharing links.
 - No storage quotas or duplicate-content detection.
 - Docker Compose is the supported packaged installation; native installers are
-  not currently planned for v0.1.
-
-The next release work is limited to hardening the core workflow: better failure
-diagnostics, upgrade fixtures, and broader automated browser coverage.
+  not currently planned for v0.2.
 
 ## License
 

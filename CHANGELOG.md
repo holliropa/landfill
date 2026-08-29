@@ -2,6 +2,24 @@
 
 All notable changes to Landfill will be documented in this file.
 
+## v0.2.0 - 2026-08-29
+
+### Added
+
+- Added first-run owner setup using a one-time code printed in the API logs.
+- Added password sign-in, persistent server-side sessions, sign-out, and an
+  owner recovery command.
+- Added authentication coverage for setup, protected routes, session expiry,
+  restart persistence, origin checks, and recovery.
+
+### Security
+
+- Protected every file-management API route with single-owner authentication.
+- Stored passwords with parameterized scrypt hashes and stored only SHA-256
+  hashes of random session tokens.
+- Added HttpOnly, SameSite=Strict session cookies, same-origin mutation checks,
+  login throttling, idle expiry, and absolute session expiry.
+
 ## v0.1.0 - 2026-08-28
 
 ### Added

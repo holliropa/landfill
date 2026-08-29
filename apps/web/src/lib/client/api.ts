@@ -24,11 +24,23 @@ export class HttpError extends Error {
   }
 }
 
+export const AUTHENTICATION_REQUIRED_EVENT = "landfill:authentication-required";
+
+export async function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, init);
+
+  if (response.status === 401) {
+    window.dispatchEvent(new Event(AUTHENTICATION_REQUIRED_EVENT));
+  }
+
+  return response;
+}
+
 export async function createFolder(
   name: string,
   parentFolderId: string,
 ): Promise<FolderItem> {
-  const response = await fetch(`${config.api.url}/folders`, {
+  const response = await apiFetch(`${config.api.url}/folders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -52,7 +64,9 @@ export type FolderContentResponse = {
 export async function getFolderContent(
   folderId: string,
 ): Promise<FolderContentResponse> {
-  const response = await fetch(`${config.api.url}/folders/${folderId}/content`);
+  const response = await apiFetch(
+    `${config.api.url}/folders/${folderId}/content`,
+  );
 
   if (!response.ok) {
     throw new Error("Failed to fetch folder children");
@@ -77,7 +91,7 @@ export async function uploadFiles(
   files.forEach((file) => formData.append("files", file));
   formData.append("folder", folderId);
 
-  const response = await fetch(`${config.api.url}/files`, {
+  const response = await apiFetch(`${config.api.url}/files`, {
     method: "POST",
     body: formData,
   });
@@ -108,7 +122,7 @@ export type FolderPathResponse = {
 export async function getFolderPath(
   folderId: string,
 ): Promise<FolderPathResponse> {
-  const response = await fetch(`${config.api.url}/folders/${folderId}/path`);
+  const response = await apiFetch(`${config.api.url}/folders/${folderId}/path`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch folder path");
@@ -131,7 +145,7 @@ export type CreateDownloadResponse = {
 export async function createDownload(
   items: DownloadItem[],
 ): Promise<CreateDownloadResponse> {
-  const response = await fetch(`${config.api.url}/downloads`, {
+  const response = await apiFetch(`${config.api.url}/downloads`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -158,7 +172,7 @@ export async function getDownloadJob(
   jobId: string,
   signal?: AbortSignal,
 ): Promise<DownloadJobResponse> {
-  const response = await fetch(`${config.api.url}/downloads/${jobId}`, {
+  const response = await apiFetch(`${config.api.url}/downloads/${jobId}`, {
     signal,
   });
 
@@ -173,7 +187,7 @@ export async function renameFile(
   fileId: string,
   newName: string,
 ): Promise<FileItem> {
-  const response = await fetch(`${config.api.url}/files/${fileId}`, {
+  const response = await apiFetch(`${config.api.url}/files/${fileId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -193,7 +207,7 @@ export async function renameFolder(
   folderId: string,
   newName: string,
 ): Promise<FolderItem> {
-  const response = await fetch(`${config.api.url}/folders/${folderId}`, {
+  const response = await apiFetch(`${config.api.url}/folders/${folderId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -210,7 +224,7 @@ export async function renameFolder(
 }
 
 export async function deleteFile(fileId: string): Promise<void> {
-  const response = await fetch(`${config.api.url}/files/${fileId}`, {
+  const response = await apiFetch(`${config.api.url}/files/${fileId}`, {
     method: "DELETE",
   });
 
@@ -220,7 +234,7 @@ export async function deleteFile(fileId: string): Promise<void> {
 }
 
 export async function deleteFolder(folderId: string): Promise<void> {
-  const response = await fetch(`${config.api.url}/folders/${folderId}`, {
+  const response = await apiFetch(`${config.api.url}/folders/${folderId}`, {
     method: "DELETE",
   });
 
@@ -234,7 +248,7 @@ export type SearchResult = {
 };
 
 export async function searchItems(query: string): Promise<SearchResult> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${config.api.url}/storage/search?query=${encodeURIComponent(query)}`,
   );
 
@@ -260,7 +274,7 @@ export async function getFolder(
   folderId: string,
   signal?: AbortSignal,
 ): Promise<FolderResponse> {
-  const response = await fetch(`${config.api.url}/folders/${folderId}`, {
+  const response = await apiFetch(`${config.api.url}/folders/${folderId}`, {
     signal,
   });
 
@@ -291,7 +305,9 @@ export async function getFileById(
   fileId: string,
   signal?: AbortSignal,
 ): Promise<FileResponse> {
-  const response = await fetch(`${config.api.url}/files/${fileId}`, { signal });
+  const response = await apiFetch(`${config.api.url}/files/${fileId}`, {
+    signal,
+  });
 
   if (!response.ok) {
     throw new HttpError("Failed to fetch file", response.status);
@@ -317,7 +333,7 @@ export type TrashContentResponse = {
 };
 
 export async function getTrashContent(): Promise<TrashContentResponse> {
-  const response = await fetch(`${config.api.url}/trash`);
+  const response = await apiFetch(`${config.api.url}/trash`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch trash");
@@ -332,7 +348,7 @@ export async function restoreTrashItem(
   id: string,
 ): Promise<void> {
   const resource = kind === "file" ? "files" : "folders";
-  const response = await fetch(
+  const response = await apiFetch(
     `${config.api.url}/trash/${resource}/${id}/restore`,
     {
       method: "POST",
@@ -349,7 +365,7 @@ export async function permanentlyDeleteTrashItem(
   id: string,
 ): Promise<void> {
   const resource = kind === "file" ? "files" : "folders";
-  const response = await fetch(`${config.api.url}/trash/${resource}/${id}`, {
+  const response = await apiFetch(`${config.api.url}/trash/${resource}/${id}`, {
     method: "DELETE",
   });
 
@@ -359,7 +375,7 @@ export async function permanentlyDeleteTrashItem(
 }
 
 export async function emptyTrash(): Promise<void> {
-  const response = await fetch(`${config.api.url}/trash`, {
+  const response = await apiFetch(`${config.api.url}/trash`, {
     method: "DELETE",
   });
 

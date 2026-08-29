@@ -1,12 +1,13 @@
 {
   "name": "@landfill/api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "tsx --watch --watch-path src src/interfaces/http/server.ts",
-    "build": "esbuild src/interfaces/http/server.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outbase=src --outdir=dist",
+    "build": "esbuild src/interfaces/http/server.ts src/scripts/reset-auth.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outbase=src --outdir=dist",
     "start": "node dist/interfaces/http/server.js",
+    "auth:reset": "node dist/scripts/reset-auth.js",
     "check-types": "tsc --noEmit",
     "pretest": "npm run build --workspace @landfill/db",
     "test": "tsx --test src/interfaces/http/api.smoke.test.ts"
