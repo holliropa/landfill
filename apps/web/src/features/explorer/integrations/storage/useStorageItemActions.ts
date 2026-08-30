@@ -6,6 +6,7 @@ import {
   getArchiveDownloadUrl,
   getDownloadJob,
   getFileDownloadUrl,
+  moveStorageItems,
   permanentlyDeleteTrashItem,
   restoreTrashItem,
   useInvalidateStorageQueries,
@@ -52,8 +53,10 @@ export function useStorageItemActions({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
   const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
   const downloadAbortRef = useRef<AbortController | null>(null);
+  const moveInProgressRef = useRef(false);
   const isMountedRef = useRef(true);
   const invalidateStorageQueries = useInvalidateStorageQueries();
   const { mutateAsync: renameFile, isPending: isRenamingFile } =
@@ -340,11 +343,80 @@ export function useStorageItemActions({
     [isDownloading],
   );
 
+  const moveItemsToFolder = useCallback(
+    async (items: ExplorerItem[], destinationFolderId: string) => {
+      if (items.length === 0 || moveInProgressRef.current) return;
+
+      moveInProgressRef.current = true;
+      setIsMoving(true);
+
+      try {
+        const result = await moveStorageItems(
+          items.map((item) => ({ kind: item.kind, id: item.id })),
+          destinationFolderId,
+        );
+
+        if (result.moved.length === 0) {
+          toast.info(
+            items.length === 1
+              ? "The item is already in that folder"
+              : "The items are already in that folder",
+          );
+          return;
+        }
+
+        toast.success(
+          items.length === 1
+            ? `Moved "${items[0].name}"`
+            : `Moved ${items.length} selected items`,
+        );
+        onAfterItemsChanged?.();
+        await refreshStorageQueries(invalidateStorageQueries);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to move items",
+        );
+      } finally {
+        moveInProgressRef.current = false;
+        if (isMountedRef.current) setIsMoving(false);
+      }
+    },
+    [invalidateStorageQueries, onAfterItemsChanged],
+  );
+
+  const moveItems = useCallback(
+    async (items: ExplorerItem[]) => {
+      if (items.length === 0 || moveInProgressRef.current) return;
+
+      const sourceFolderIds = new Set(
+        items
+          .map((item) => item.location?.id)
+          .filter((id): id is string => id !== undefined),
+      );
+      const destination = await dialog.selectFolder({
+        title: items.length === 1 ? "Move item" : `Move ${items.length} items`,
+        description:
+          "Choose a destination. Existing items will not be overwritten.",
+        confirmLabel: "Move here",
+        initialFolderId:
+          sourceFolderIds.size === 1 ? [...sourceFolderIds][0] : "root",
+        excludedFolderIds: items
+          .filter((item) => item.kind === "folder")
+          .map((item) => item.id),
+      });
+
+      if (!destination) return;
+      await moveItemsToFolder(items, destination.id);
+    },
+    [dialog, moveItemsToFolder],
+  );
+
   return useMemo(
     () => ({
       isDownloading,
       isDeleting,
       isRenaming,
+      isMoving,
       isRestoring,
       isPermanentlyDeleting,
       renameItems,
@@ -352,6 +424,8 @@ export function useStorageItemActions({
       restoreItems,
       permanentlyDeleteItems,
       downloadItems,
+      moveItems,
+      moveItemsToFolder,
     }),
     [
       deleteItems,
@@ -360,10 +434,13 @@ export function useStorageItemActions({
       isDownloading,
       isPermanentlyDeleting,
       isRenaming,
+      isMoving,
       isRestoring,
       permanentlyDeleteItems,
       renameItems,
       restoreItems,
+      moveItems,
+      moveItemsToFolder,
     ],
   );
 }

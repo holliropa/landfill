@@ -2,6 +2,7 @@ import type { ExplorerItem } from "@/features/explorer/types";
 import { formatDateTime, formatSize } from "@/utils";
 import { createElement, type ReactNode } from "react";
 import styles from "./ExplorerList.module.css";
+import type { ExplorerSortKey } from "@/features/explorer/hooks";
 
 export type ExplorerListColumn = {
   key: string;
@@ -9,6 +10,7 @@ export type ExplorerListColumn = {
   width: number;
   minWidth?: number;
   resizable?: boolean;
+  sortKey?: ExplorerSortKey;
   headerClassName?: string;
   cellClassName?: string;
   renderCell: (item: ExplorerItem) => ReactNode;
@@ -35,6 +37,7 @@ export const defaultExplorerListColumns: ExplorerListColumn[] = [
     width: 320,
     minWidth: 140,
     cellClassName: styles.nameCell,
+    sortKey: "name",
     renderCell: (item) => item.name,
   },
   {
@@ -43,6 +46,7 @@ export const defaultExplorerListColumns: ExplorerListColumn[] = [
     width: 170,
     minWidth: 120,
     cellClassName: styles.metaCell,
+    sortKey: "date",
     renderCell: (item) => formatExplorerDate(item.createdAt),
   },
   {
@@ -51,8 +55,29 @@ export const defaultExplorerListColumns: ExplorerListColumn[] = [
     width: 110,
     minWidth: 100,
     cellClassName: styles.metaCell,
+    sortKey: "size",
     renderCell: (item) =>
       item.size !== null ? formatExplorerSize(item.size) : "",
+  },
+];
+
+export const searchExplorerListColumns: ExplorerListColumn[] = [
+  ...defaultExplorerListColumns,
+  {
+    key: "location",
+    label: "Location",
+    width: 260,
+    minWidth: 160,
+    cellClassName: styles.metaCell,
+    renderCell: (item) =>
+      (
+        item.location?.path ?? [
+          { id: item.location?.id, name: item.location?.name },
+        ]
+      )
+        .filter((folder) => folder.id && folder.name)
+        .map((folder) => (folder.id === "root" ? "All files" : folder.name))
+        .join(" / "),
   },
 ];
 

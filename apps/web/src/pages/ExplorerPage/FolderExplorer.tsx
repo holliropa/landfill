@@ -2,6 +2,7 @@ import {
   Explorer,
   type ExplorerItem,
   useExplorerController,
+  useExplorerSorting,
 } from "@/features/explorer";
 import {
   createStorageExplorerCommands,
@@ -16,6 +17,7 @@ import { useId, useMemo } from "react";
 const toolbarCommandIds = [
   "rename",
   "download",
+  "move",
   "moveToTrash",
   "details",
 ] as const;
@@ -23,6 +25,7 @@ const contextMenuCommandIds = [
   "open",
   "rename",
   "download",
+  "move",
   "details",
   "moveToTrash",
 ] as const;
@@ -31,6 +34,7 @@ const detailsCommandIds = [
   "open",
   "rename",
   "download",
+  "move",
   "moveToTrash",
 ] as const;
 
@@ -45,7 +49,8 @@ export function FolderExplorer({
   isLoading?: boolean;
   isError?: boolean;
 }) {
-  const controller = useExplorerController({ items });
+  const { sortedItems, sort, changeSort } = useExplorerSorting(items);
+  const controller = useExplorerController({ items: sortedItems });
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
@@ -85,6 +90,11 @@ export function FolderExplorer({
                 }}
                 isLoading={isLoading}
                 isError={isError}
+                sort={sort}
+                onSortChange={changeSort}
+                onItemsDrop={(draggedItems, destination) => {
+                  void storage.moveItemsToFolder(draggedItems, destination.id);
+                }}
               />
             </FolderUploadDropZone>
           </Explorer.Content>

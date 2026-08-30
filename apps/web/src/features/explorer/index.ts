@@ -21,3 +21,10 @@ export type {
   ExplorerSurface,
 } from "./components";
 export type { ExplorerItem } from "./types";
+export { searchExplorerListColumns } from "./components/ExplorerList";
+export {
+  useExplorerSorting,
+  type ExplorerSort,
+  type ExplorerSortDirection,
+  type ExplorerSortKey,
+} from "./hooks";

@@ -10,8 +10,12 @@ place to upload, organize, preview, find, and retrieve files through a browser.
 - Upload multiple files or drag them directly into a folder.
 - Create and browse nested folders.
 - Search files and folders by name.
+- See the full containing path for every search result.
 - Preview images, PDFs, audio, and video in the browser.
 - Rename files and folders.
+- Move one or several files and folders with a destination picker or by dragging
+  them onto a folder.
+- Sort folders and files by name, date, or size and keep that preference.
 - Download one file directly or prepare a ZIP from several items or folders.
 - Move items to trash, restore them, or delete them permanently.
 - Store metadata in SQLite and file contents on disk under one data directory.
@@ -66,7 +70,7 @@ docker compose down
 Do not add `-v` unless you intend to permanently delete Landfill's database and
 stored files.
 
-### Upgrading from v0.1
+### Upgrading
 
 Back up the `landfill-api` volume before upgrading. Then pull the new version
 and rebuild the containers:
@@ -76,14 +80,15 @@ docker compose down --remove-orphans
 docker compose up --build -d --remove-orphans
 ```
 
-Do not add `-v`: v0.2 automatically migrates the existing database in the
-`landfill-api` volume and preserves its files. After the upgrade, read the
-one-time setup code from `docker compose logs api` and create the owner
-password. Existing files are not changed by owner setup.
+Do not add `-v`: Landfill automatically applies any required database migrations
+in the `landfill-api` volume and preserves its files. When upgrading from v0.1,
+read the one-time setup code from `docker compose logs api` and create the owner
+password. Upgrading from v0.2 to v0.3 requires no new setup and no schema
+migration.
 
 ## Security model
 
-Landfill v0.2 has one local owner account. There are no usernames, invitations,
+Landfill v0.3 has one local owner account. There are no usernames, invitations,
 sharing accounts, or password-reset emails. The owner password is scrypt-hashed
 in SQLite. Browser sessions use random tokens; only their SHA-256 hashes are
 stored. Sessions expire after seven idle days or 30 days total.
@@ -182,8 +187,8 @@ npm run build
 
 The API smoke test creates an isolated temporary data directory and exercises
 owner setup, session security and persistence, recovery, folder creation,
-upload, search, rename, archive download, trash, and restore through real HTTP
-requests.
+upload, search, rename, movement and conflict safety, restart persistence,
+archive download, trash, and restore through real HTTP requests.
 
 ## Architecture
 
@@ -217,7 +222,7 @@ requiring a separate queue service.
 - No sharing links.
 - No storage quotas or duplicate-content detection.
 - Docker Compose is the supported packaged installation; native installers are
-  not currently planned for v0.2.
+  not currently planned.
 
 ## License
 

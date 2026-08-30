@@ -260,6 +260,48 @@ export async function searchItems(query: string): Promise<SearchResult> {
   return { items: data.items.map(normalizeStorageItem) };
 }
 
+export type MoveStorageItem = {
+  kind: "file" | "folder";
+  id: string;
+};
+
+export type MoveStorageItemsResponse = {
+  moved: MoveStorageItem[];
+  destinationFolderId: string;
+};
+
+export async function moveStorageItems(
+  items: MoveStorageItem[],
+  destinationFolderId: string,
+): Promise<MoveStorageItemsResponse> {
+  const response = await apiFetch(`${config.api.url}/storage/move`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ items, destinationFolderId }),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => null)) as {
+      error?: string;
+      conflicts?: { name: string }[];
+    } | null;
+    const conflictNames = Array.from(
+      new Set(data?.conflicts?.map((conflict) => conflict.name) ?? []),
+    );
+    const conflictDetails = conflictNames.length
+      ? `: ${conflictNames.map((name) => `"${name}"`).join(", ")}`
+      : "";
+    throw new HttpError(
+      `${data?.error ?? "Failed to move items"}${conflictDetails}`,
+      response.status,
+    );
+  }
+
+  return response.json();
+}
+
 export type FolderResponse = {
   id: string;
   name: string;

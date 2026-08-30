@@ -8,7 +8,13 @@ import React, {
   useState,
 } from "react";
 import type { ExplorerItem } from "@/features/explorer/types";
-import { AlertCircleIcon, FolderOpenIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  FolderOpenIcon,
+} from "lucide-react";
+import type { ExplorerSort, ExplorerSortKey } from "@/features/explorer/hooks";
 import type {
   ExplorerAction,
   ExplorerSelectionMode,
@@ -39,7 +45,12 @@ export type ExplorerListProps = {
   loadingState?: ReactNode;
   isLoading?: boolean;
   isError?: boolean;
+  sort?: ExplorerSort;
+  onSortChange?: (key: ExplorerSortKey) => void;
+  onItemsDrop?: (items: ExplorerItem[], destination: ExplorerItem) => void;
 };
+
+const STORAGE_ITEMS_DRAG_TYPE = "application/x-landfill-storage-items";
 
 export function ExplorerList({
   columns: initialColumns = defaultExplorerListColumns,
@@ -56,10 +67,15 @@ export function ExplorerList({
   loadingState,
   isLoading = false,
   isError = false,
+  sort,
+  onSortChange,
+  onItemsDrop,
 }: ExplorerListProps) {
   const { controller, commands } = useExplorerContext();
   const { items, state, dispatch } = controller;
   const [columns, setColumns] = useState(initialColumns);
+  const [draggedKeys, setDraggedKeys] = useState<Set<string>>(new Set());
+  const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
   const openCommand = commands.find(
     (command) =>
       command.id === openActionId && command.surfaces.includes("item"),
@@ -149,6 +165,93 @@ export function ExplorerList({
     [controller],
   );
 
+  const handleRowDragStart = useCallback(
+    (index: number, event: React.DragEvent) => {
+      const item = items[index];
+      if (!item || !onItemsDrop) return;
+
+      const draggedItems = state.selectedKeys.has(item.key)
+        ? controller.selectedItems
+        : [item];
+      const keys = new Set(draggedItems.map((draggedItem) => draggedItem.key));
+
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData(
+        STORAGE_ITEMS_DRAG_TYPE,
+        JSON.stringify(
+          draggedItems.map((draggedItem) => ({
+            kind: draggedItem.kind,
+            id: draggedItem.id,
+          })),
+        ),
+      );
+      event.dataTransfer.setData(
+        "text/plain",
+        draggedItems.map((draggedItem) => draggedItem.name).join(", "),
+      );
+      setDraggedKeys(keys);
+    },
+    [controller.selectedItems, items, onItemsDrop, state.selectedKeys],
+  );
+
+  const handleRowDragOver = useCallback(
+    (item: ExplorerItem, event: React.DragEvent) => {
+      if (
+        !onItemsDrop ||
+        item.kind !== "folder" ||
+        draggedKeys.has(item.key) ||
+        !Array.from(event.dataTransfer.types).includes(STORAGE_ITEMS_DRAG_TYPE)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      setDropTargetKey(item.key);
+    },
+    [draggedKeys, onItemsDrop],
+  );
+
+  const handleRowDragLeave = useCallback(
+    (item: ExplorerItem, event: React.DragEvent<HTMLDivElement>) => {
+      if (
+        event.relatedTarget instanceof Node &&
+        event.currentTarget.contains(event.relatedTarget)
+      ) {
+        return;
+      }
+      setDropTargetKey((current) => (current === item.key ? null : current));
+    },
+    [],
+  );
+
+  const handleRowDrop = useCallback(
+    (destination: ExplorerItem, event: React.DragEvent) => {
+      if (!onItemsDrop || destination.kind !== "folder") return;
+
+      event.preventDefault();
+      setDropTargetKey(null);
+
+      try {
+        const references = JSON.parse(
+          event.dataTransfer.getData(STORAGE_ITEMS_DRAG_TYPE),
+        ) as { kind: "file" | "folder"; id: string }[];
+        const referenceKeys = new Set(
+          references.map((reference) => `${reference.kind}:${reference.id}`),
+        );
+        if (referenceKeys.has(destination.key)) return;
+
+        const draggedItems = items.filter((item) =>
+          referenceKeys.has(item.key),
+        );
+        if (draggedItems.length > 0) onItemsDrop(draggedItems, destination);
+      } catch {
+        // Ignore malformed or unrelated drag data.
+      }
+    },
+    [items, onItemsDrop],
+  );
+
   function startResize(
     event: React.MouseEvent<HTMLDivElement>,
     columnIndex: number,
@@ -201,6 +304,7 @@ export function ExplorerList({
         className={styles.header}
         ref={headerRef}
         style={{ gridTemplateColumns }}
+        role="row"
       >
         {columns.map((column, index) => (
           <div
@@ -208,8 +312,34 @@ export function ExplorerList({
             className={[styles.headerCell, column.headerClassName]
               .filter(Boolean)
               .join(" ")}
+            role="columnheader"
+            aria-sort={
+              column.sortKey
+                ? sort?.key === column.sortKey
+                  ? sort.direction === "asc"
+                    ? "ascending"
+                    : "descending"
+                  : "none"
+                : undefined
+            }
           >
-            <span>{column.label}</span>
+            {column.sortKey && onSortChange ? (
+              <button
+                type="button"
+                className={styles.sortButton}
+                onClick={() => onSortChange(column.sortKey!)}
+              >
+                <span>{column.label}</span>
+                {sort?.key === column.sortKey &&
+                  (sort.direction === "asc" ? (
+                    <ArrowUpIcon size={14} aria-hidden="true" />
+                  ) : (
+                    <ArrowDownIcon size={14} aria-hidden="true" />
+                  ))}
+              </button>
+            ) : (
+              <span>{column.label}</span>
+            )}
 
             <div
               className={styles.resizeHandle}
@@ -267,6 +397,8 @@ export function ExplorerList({
                 columns={columns}
                 isSelected={isSelected}
                 isFocused={index === state.focusedIndex}
+                isDragging={draggedKeys.has(item.key)}
+                isDropTarget={dropTargetKey === item.key}
                 gridTemplateColumns={gridTemplateColumns}
                 canOpen={Boolean(openCommand)}
                 rowRef={(element) => {
@@ -275,6 +407,15 @@ export function ExplorerList({
                 onItemClick={handleRowClick}
                 onItemOpen={handleRowOpen}
                 onItemContextMenu={handleRowContextMenu}
+                canDrag={Boolean(onItemsDrop)}
+                onDragStart={handleRowDragStart}
+                onDragOver={handleRowDragOver}
+                onDragLeave={handleRowDragLeave}
+                onDrop={handleRowDrop}
+                onDragEnd={() => {
+                  setDraggedKeys(new Set());
+                  setDropTargetKey(null);
+                }}
               />
             );
           })
@@ -290,12 +431,23 @@ type ExplorerRowProps = {
   columns: ExplorerListColumn[];
   isSelected: boolean;
   isFocused: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
   gridTemplateColumns: string;
   canOpen: boolean;
   rowRef: (element: HTMLDivElement | null) => void;
   onItemOpen: (index: number) => void;
   onItemClick: (index: number, event: React.MouseEvent) => void;
   onItemContextMenu: (index: number, event: React.MouseEvent) => void;
+  canDrag: boolean;
+  onDragStart: (index: number, event: React.DragEvent) => void;
+  onDragOver: (item: ExplorerItem, event: React.DragEvent) => void;
+  onDragLeave: (
+    item: ExplorerItem,
+    event: React.DragEvent<HTMLDivElement>,
+  ) => void;
+  onDrop: (item: ExplorerItem, event: React.DragEvent) => void;
+  onDragEnd: () => void;
 };
 
 const ExplorerRow = React.memo(function ExplorerRow({
@@ -304,18 +456,31 @@ const ExplorerRow = React.memo(function ExplorerRow({
   columns,
   isSelected,
   isFocused,
+  isDragging,
+  isDropTarget,
   gridTemplateColumns,
   canOpen,
   rowRef,
   onItemOpen,
   onItemClick,
   onItemContextMenu,
+  canDrag,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
 }: ExplorerRowProps) {
   return (
     <div
       id={`explorer-row-${index}`}
       ref={rowRef}
-      className={[styles.row, isSelected ? styles.selectedRow : ""]
+      className={[
+        styles.row,
+        isSelected ? styles.selectedRow : "",
+        isDragging ? styles.draggingRow : "",
+        isDropTarget ? styles.dropTargetRow : "",
+      ]
         .filter(Boolean)
         .join(" ")}
       style={{ gridTemplateColumns }}
@@ -331,6 +496,12 @@ const ExplorerRow = React.memo(function ExplorerRow({
       aria-selected={isSelected}
       data-focused={isFocused || undefined}
       role="row"
+      draggable={canDrag}
+      onDragStart={(event) => onDragStart(index, event)}
+      onDragOver={(event) => onDragOver(item, event)}
+      onDragLeave={(event) => onDragLeave(item, event)}
+      onDrop={(event) => onDrop(item, event)}
+      onDragEnd={onDragEnd}
     >
       {columns.map((column) => (
         <div

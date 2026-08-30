@@ -25,6 +25,7 @@ export function ExplorerPage() {
       name: folder.name,
       createdAt: folder.createdAt,
       size: null,
+      location: { id: normalizedFolderId, name: normalizedFolderId },
       ThumbnailComponent: <FolderIcon size={18} />,
     }));
 
@@ -35,6 +36,7 @@ export function ExplorerPage() {
       name: file.name,
       createdAt: file.createdAt,
       size: file.size,
+      location: { id: normalizedFolderId, name: normalizedFolderId },
       ThumbnailComponent: (
         <FileThumbnail
           fileId={file.id}
@@ -45,7 +47,7 @@ export function ExplorerPage() {
     }));
 
     return [...folderItems, ...fileItems];
-  }, [folderContent]);
+  }, [folderContent, normalizedFolderId]);
 
   return (
     <div className={styles.root}>

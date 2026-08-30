@@ -10,6 +10,7 @@ export type ExplorerItem = {
   location?: {
     id: string;
     name: string;
+    path?: { id: string; name: string }[];
   };
   ThumbnailComponent: React.ReactNode;
 };

@@ -8,7 +8,10 @@ export default defineConfig(({ mode }) => {
   const apiProxyTarget = env.API_PROXY_TARGET?.trim();
   const proxy = apiProxyTarget
     ? {
-        "/api": apiProxyTarget,
+        "/api": {
+          target: apiProxyTarget,
+          changeOrigin: false,
+        },
       }
     : undefined;
 

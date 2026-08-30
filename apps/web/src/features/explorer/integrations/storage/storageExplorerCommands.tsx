@@ -9,6 +9,7 @@ import {
   DownloadIcon,
   ExternalLinkIcon,
   FileEditIcon,
+  FolderInputIcon,
   InfoIcon,
   Trash2Icon,
   TrashIcon,
@@ -90,6 +91,24 @@ export function createStorageExplorerCommands({
         storage.isDownloading || runtime.targetItems.length === 0,
       run: (runtime) => {
         void storage.downloadItems(runtime.targetItems);
+      },
+    },
+    {
+      id: "move",
+      label: "Move",
+      icon: () =>
+        storage.isMoving ? (
+          <SpinnerIcon size={16} />
+        ) : (
+          <FolderInputIcon size={16} />
+        ),
+      surfaces: ["toolbar", "context-menu", "details"],
+      order: 35,
+      isVisible: (runtime) => runtime.targetItems.length > 0,
+      isDisabled: (runtime) =>
+        storage.isMoving || runtime.targetItems.length === 0,
+      run: (runtime) => {
+        void storage.moveItems(runtime.targetItems);
       },
     },
     {

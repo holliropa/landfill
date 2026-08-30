@@ -8,6 +8,7 @@ export type StorageItem = {
   location: {
     id: string;
     name: string;
+    path: { id: string; name: string }[];
   };
 };
 

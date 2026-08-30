@@ -1,0 +1,87 @@
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.breadcrumbPart {
+  display: inline-flex;
+  align-items: center;
+}
+
+.breadcrumb {
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.breadcrumb:hover,
+.breadcrumb[aria-current="location"] {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.folderList {
+  min-height: 180px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.folder {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--divider-subtle);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folder:last-child {
+  border-bottom: 0;
+}
+
+.folder:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.folder:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.folder span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state,
+.error {
+  margin: 0;
+  padding: 24px 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.error {
+  color: var(--danger-bg);
+}

@@ -279,6 +279,133 @@ test("authenticated core file-management workflow works over HTTP", async () => 
   });
 });
 
+test("items move atomically without breaking folder trees", async () => {
+  const sourceId = await createTestFolder("Move source");
+  const destinationId = await createTestFolder("Move destination");
+  const parentId = await createTestFolder("Tree parent", sourceId);
+  const childId = await createTestFolder("Tree child", parentId);
+  const nestedFileId = await uploadTextFile(
+    "nested-move.txt",
+    "The hierarchy should stay intact",
+    childId,
+  );
+  const looseFileId = await uploadTextFile(
+    "loose-move.txt",
+    "Move me too",
+    sourceId,
+  );
+
+  const moveResponse = await jsonRequest(`${baseUrl}/api/storage/move`, {
+    method: "POST",
+    body: {
+      items: [
+        { kind: "folder", id: parentId },
+        { kind: "folder", id: childId },
+        { kind: "file", id: nestedFileId },
+        { kind: "file", id: looseFileId },
+      ],
+      destinationFolderId: destinationId,
+    },
+  });
+  assert.equal(moveResponse.status, 200);
+  const moveResult = (await moveResponse.json()) as {
+    moved: { kind: "file" | "folder"; id: string }[];
+  };
+  assert.deepEqual(
+    new Set(moveResult.moved.map((item) => `${item.kind}:${item.id}`)),
+    new Set([`folder:${parentId}`, `file:${looseFileId}`]),
+  );
+
+  const destinationContent = await getTestFolderContent(destinationId);
+  assert.ok(
+    destinationContent.folders.some((folder) => folder.id === parentId),
+  );
+  assert.ok(destinationContent.files.some((file) => file.id === looseFileId));
+  const parentContent = await getTestFolderContent(parentId);
+  assert.ok(parentContent.folders.some((folder) => folder.id === childId));
+  const childContent = await getTestFolderContent(childId);
+  assert.ok(childContent.files.some((file) => file.id === nestedFileId));
+
+  const invalidMove = await jsonRequest(`${baseUrl}/api/storage/move`, {
+    method: "POST",
+    body: {
+      items: [{ kind: "folder", id: parentId }],
+      destinationFolderId: childId,
+    },
+  });
+  assert.equal(invalidMove.status, 409);
+  assert.deepEqual(await invalidMove.json(), {
+    error: "A folder cannot be moved into itself or one of its descendants",
+  });
+
+  const conflictSourceId = await createTestFolder("Conflict source");
+  const conflictDestinationId = await createTestFolder("Conflict destination");
+  const conflictingFileId = await uploadTextFile(
+    "duplicate.txt",
+    "source",
+    conflictSourceId,
+  );
+  const safeFileId = await uploadTextFile(
+    "safe.txt",
+    "must not move on partial failure",
+    conflictSourceId,
+  );
+  await uploadTextFile("duplicate.txt", "destination", conflictDestinationId);
+
+  const conflictResponse = await jsonRequest(`${baseUrl}/api/storage/move`, {
+    method: "POST",
+    body: {
+      items: [
+        { kind: "file", id: conflictingFileId },
+        { kind: "file", id: safeFileId },
+      ],
+      destinationFolderId: conflictDestinationId,
+    },
+  });
+  assert.equal(conflictResponse.status, 409);
+  const conflict = (await conflictResponse.json()) as {
+    error: string;
+    conflicts: { id: string; name: string }[];
+  };
+  assert.equal(
+    conflict.error,
+    "One or more items have the same name in the destination",
+  );
+  assert.deepEqual(
+    conflict.conflicts.map((item) => ({ id: item.id, name: item.name })),
+    [{ id: conflictingFileId, name: "duplicate.txt" }],
+  );
+  const conflictSourceContent = await getTestFolderContent(conflictSourceId);
+  assert.ok(conflictSourceContent.files.some((file) => file.id === safeFileId));
+
+  const searchResponse = await authenticatedFetch(
+    "/api/storage/search?query=nested-move",
+  );
+  assert.equal(searchResponse.status, 200);
+  const search = (await searchResponse.json()) as {
+    items: {
+      id: string;
+      location: { path: { id: string; name: string }[] };
+    }[];
+  };
+  const nestedSearchResult = search.items.find(
+    (item) => item.id === nestedFileId,
+  );
+  assert.ok(nestedSearchResult);
+  assert.deepEqual(
+    nestedSearchResult.location.path.map((folder) => folder.name),
+    ["root", "Move destination", "Tree parent", "Tree child"],
+  );
+
+  await closeServer();
+  await listen();
+  const persistedDestination = await getTestFolderContent(destinationId);
+  assert.ok(
+    persistedDestination.folders.some((folder) => folder.id === parentId),
+  );
+  assert.ok(persistedDestination.files.some((file) => file.id === looseFileId));
+});
+
 test("authentication can be reset for owner recovery", async () => {
   const { resetAuthentication } =
     await import("@/application/auth/auth-service");
@@ -358,4 +485,38 @@ async function waitForArchive(jobId: string) {
   }
 
   assert.fail("Archive job did not finish within the smoke-test timeout");
+}
+
+async function createTestFolder(name: string, parentFolder = "root") {
+  const response = await jsonRequest(`${baseUrl}/api/folders`, {
+    method: "POST",
+    body: { name, parentFolder },
+  });
+  assert.equal(response.status, 201);
+  const folder = (await response.json()) as { id: string };
+  return folder.id;
+}
+
+async function uploadTextFile(name: string, contents: string, folder: string) {
+  const body = new FormData();
+  body.append("files", new Blob([contents], { type: "text/plain" }), name);
+  body.append("folder", folder);
+
+  const response = await authenticatedFetch("/api/files", {
+    method: "POST",
+    body,
+  });
+  assert.equal(response.status, 201);
+  const uploadedFiles = (await response.json()) as { id: string }[];
+  assert.equal(uploadedFiles.length, 1);
+  return uploadedFiles[0].id;
+}
+
+async function getTestFolderContent(folderId: string) {
+  const response = await authenticatedFetch(`/api/folders/${folderId}/content`);
+  assert.equal(response.status, 200);
+  return (await response.json()) as {
+    folders: { id: string; name: string }[];
+    files: { id: string; name: string }[];
+  };
 }

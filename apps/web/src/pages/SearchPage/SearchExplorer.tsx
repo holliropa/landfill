@@ -1,7 +1,9 @@
 import {
   Explorer,
+  searchExplorerListColumns,
   type ExplorerItem,
   useExplorerController,
+  useExplorerSorting,
 } from "@/features/explorer";
 import {
   createStorageExplorerCommands,
@@ -15,6 +17,7 @@ import { useId, useMemo } from "react";
 const toolbarCommandIds = [
   "rename",
   "download",
+  "move",
   "moveToTrash",
   "details",
 ] as const;
@@ -22,6 +25,7 @@ const contextMenuCommandIds = [
   "open",
   "rename",
   "download",
+  "move",
   "details",
   "moveToTrash",
 ] as const;
@@ -30,6 +34,7 @@ const detailsCommandIds = [
   "open",
   "rename",
   "download",
+  "move",
   "moveToTrash",
 ] as const;
 
@@ -42,7 +47,8 @@ export function SearchExplorer({
   isLoading?: boolean;
   isError?: boolean;
 }) {
-  const controller = useExplorerController({ items });
+  const { sortedItems, sort, changeSort } = useExplorerSorting(items);
+  const controller = useExplorerController({ items: sortedItems });
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
@@ -66,6 +72,7 @@ export function SearchExplorer({
         <Explorer.Workspace>
           <Explorer.Content>
             <Explorer.List
+              columns={searchExplorerListColumns}
               ariaLabel="Search results"
               emptyState={{
                 title: "No results found",
@@ -77,6 +84,11 @@ export function SearchExplorer({
               }}
               isLoading={isLoading}
               isError={isError}
+              sort={sort}
+              onSortChange={changeSort}
+              onItemsDrop={(draggedItems, destination) => {
+                void storage.moveItemsToFolder(draggedItems, destination.id);
+              }}
             />
           </Explorer.Content>
 
