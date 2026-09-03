@@ -1,4 +1,4 @@
-import db, { folders } from "@/infrastructure/db";
+import db, { storageEntries } from "@/infrastructure/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { isFolderInActiveTree } from "@/application/storage/trash-visibility";
 
@@ -36,13 +36,14 @@ export async function createFolder(
     }
 
     const countDuplicates = await db.$count(
-      folders,
+      storageEntries,
       and(
-        eq(folders.name, name),
+        eq(storageEntries.kind, "folder"),
+        eq(storageEntries.name, name),
         parentFolderId === null
-          ? isNull(folders.parentFolderId)
-          : eq(folders.parentFolderId, parentFolderId),
-        isNull(folders.deletedAt),
+          ? isNull(storageEntries.parentId)
+          : eq(storageEntries.parentId, parentFolderId),
+        isNull(storageEntries.deletedAt),
       ),
     );
 
@@ -51,12 +52,13 @@ export async function createFolder(
     }
 
     const [newFolder] = await db
-      .insert(folders)
-      .values({
-        name,
-        parentFolderId,
-      })
-      .returning();
+      .insert(storageEntries)
+      .values({ kind: "folder", name, parentId: parentFolderId })
+      .returning({
+        id: storageEntries.id,
+        name: storageEntries.name,
+        parentFolderId: storageEntries.parentId,
+      });
 
     return { success: true, data: newFolder };
   } catch (error) {

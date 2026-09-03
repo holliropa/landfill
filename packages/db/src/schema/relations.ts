@@ -1,33 +1,38 @@
-﻿import { defineRelations } from "drizzle-orm";
-import { files, folders } from "./filesystem.js";
+import { defineRelations } from "drizzle-orm";
+import { storageBlobs, storageEntries } from "./filesystem.js";
 import { downloadJobItems, downloadJobs } from "./downloads.js";
 
 export const relations = defineRelations(
-  { files, folders, downloadJobs, downloadJobItems },
+  { storageBlobs, storageEntries, downloadJobs, downloadJobItems },
   (r) => ({
-    files: {
-      folder: r.one.folders({
-        from: r.files.folderId,
-        to: r.folders.id,
+    storageBlobs: {
+      entries: r.many.storageEntries({
+        from: r.storageBlobs.id,
+        to: r.storageEntries.blobId,
       }),
     },
 
-    folders: {
-      parentFolder: r.one.folders({
-        from: r.folders.parentFolderId,
-        to: r.folders.id,
-        alias: "folder_tree",
+    storageEntries: {
+      parent: r.one.storageEntries({
+        from: r.storageEntries.parentId,
+        to: r.storageEntries.id,
+        alias: "entry_tree",
       }),
 
-      childrenFolders: r.many.folders({
-        from: r.folders.id,
-        to: r.folders.parentFolderId,
-        alias: "folder_tree",
+      children: r.many.storageEntries({
+        from: r.storageEntries.id,
+        to: r.storageEntries.parentId,
+        alias: "entry_tree",
       }),
 
-      files: r.many.files({
-        from: r.folders.id,
-        to: r.files.folderId,
+      blob: r.one.storageBlobs({
+        from: r.storageEntries.blobId,
+        to: r.storageBlobs.id,
+      }),
+
+      downloadItems: r.many.downloadJobItems({
+        from: r.storageEntries.id,
+        to: r.downloadJobItems.entryId,
       }),
     },
 
@@ -42,6 +47,10 @@ export const relations = defineRelations(
       downloadJob: r.one.downloadJobs({
         from: r.downloadJobItems.jobId,
         to: r.downloadJobs.id,
+      }),
+      entry: r.one.storageEntries({
+        from: r.downloadJobItems.entryId,
+        to: r.storageEntries.id,
       }),
     },
   }),

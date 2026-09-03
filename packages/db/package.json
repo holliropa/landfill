@@ -23,6 +23,7 @@
     "prebuild": "node scripts/bundle-migrations.js",
     "build": "tsc",
     "check-types": "tsc --noEmit",
+    "test": "npm run build && node --test dist/migration.test.js",
     "prepack": "npm run build"
   },
   "dependencies": {

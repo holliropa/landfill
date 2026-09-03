@@ -1,5 +1,5 @@
-import db, { files } from "@/infrastructure/db";
-import { and, eq, isNull } from "drizzle-orm";
+import db from "@/infrastructure/db";
+import { moveEntryToTrash } from "@/application/storage/entry-operations";
 
 export type DeleteFileResult =
   | { success: true; data: { id: string; diskName: string } }
@@ -9,34 +9,27 @@ export type DeleteFileResult =
     };
 
 export async function deleteFile(id: string): Promise<DeleteFileResult> {
-  const file = await db.query.files.findFirst({
-    where: { id },
-    columns: {
-      id: true,
-      deletedAt: true,
-    },
+  const file = await db.query.storageEntries.findFirst({
+    where: { id, kind: "file" },
+    columns: { id: true },
+    with: { blob: { columns: { diskName: true } } },
   });
 
-  if (!file) {
+  if (!file || !file.blob) {
     return { success: false, code: "FILE_NOT_FOUND" };
   }
 
-  if (file.deletedAt !== null) {
-    return { success: false, code: "FILE_IN_TRASH" };
+  const result = await moveEntryToTrash(id, "file");
+
+  if (!result.success) {
+    const code =
+      result.code === "NOT_FOUND"
+        ? "FILE_NOT_FOUND"
+        : result.code === "ALREADY_IN_TRASH"
+          ? "FILE_IN_TRASH"
+          : "DATABASE_ERROR";
+    return { success: false, code };
   }
 
-  const [deletedFile] = await db
-    .update(files)
-    .set({ deletedAt: new Date() })
-    .where(and(eq(files.id, id), isNull(files.deletedAt)))
-    .returning({
-      id: files.id,
-      diskName: files.diskName,
-    });
-
-  if (!deletedFile) {
-    return { success: false, code: "DATABASE_ERROR" };
-  }
-
-  return { success: true, data: deletedFile };
+  return { success: true, data: { id, diskName: file.blob.diskName } };
 }

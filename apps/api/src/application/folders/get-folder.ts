@@ -5,10 +5,7 @@ export type GetFolderData = {
   id: string;
   name: string;
   createdAt: Date;
-  parentFolder: {
-    id: string;
-    name: string;
-  } | null;
+  parentFolder: { id: string; name: string } | null;
 };
 
 export type GetFolderResult =
@@ -29,41 +26,36 @@ export async function getFolder(id: string): Promise<GetFolderResult> {
   }
 
   try {
-    const folder = await db.query.folders.findFirst({
+    const folder = await db.query.storageEntries.findFirst({
       columns: {
         id: true,
         name: true,
         createdAt: true,
-        parentFolderId: true,
+        parentId: true,
         deletedAt: true,
       },
-      where: { id },
+      where: { id, kind: "folder" },
       with: {
-        parentFolder: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
+        parent: { columns: { id: true, name: true } },
       },
     });
 
     if (
       !folder ||
       folder.deletedAt !== null ||
-      (await hasTrashedAncestor(folder.parentFolderId))
+      (await hasTrashedAncestor(folder.parentId))
     ) {
       return { success: false, code: "NOT_FOUND" };
     }
 
-    const { deletedAt, parentFolderId, parentFolder, ...folderData } = folder;
-
     return {
       success: true,
       data: {
-        ...folderData,
-        parentFolder: parentFolder
-          ? { id: parentFolder.id, name: parentFolder.name }
+        id: folder.id,
+        name: folder.name,
+        createdAt: folder.createdAt,
+        parentFolder: folder.parent
+          ? { id: folder.parent.id, name: folder.parent.name }
           : null,
       },
     };

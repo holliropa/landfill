@@ -1,6 +1,4 @@
-import db, { folders } from "@/infrastructure/db";
-import { and, eq, isNull, ne } from "drizzle-orm";
-import { hasTrashedAncestor } from "@/application/storage/trash-visibility";
+import { renameEntry } from "@/application/storage/entry-operations";
 
 export type RenameFolderResult =
   | {
@@ -21,56 +19,17 @@ export async function renameFolder(
   id: string,
   newName: string,
 ): Promise<RenameFolderResult> {
-  const normalizedName = newName.trim();
+  const result = await renameEntry(id, "folder", newName);
 
-  if (!normalizedName) {
-    return { success: false, code: "INVALID_NAME" };
-  }
+  if (!result.success) return result as RenameFolderResult;
 
-  try {
-    const [folder] = await db
-      .select({
-        id: folders.id,
-        parentFolderId: folders.parentFolderId,
-      })
-      .from(folders)
-      .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
-      .limit(1);
-
-    if (!folder || (await hasTrashedAncestor(folder.parentFolderId))) {
-      return { success: false, code: "NOT_FOUND" };
-    }
-
-    const duplicateCount = await db.$count(
-      folders,
-      and(
-        eq(folders.name, normalizedName),
-        ne(folders.id, id),
-        folder.parentFolderId === null
-          ? isNull(folders.parentFolderId)
-          : eq(folders.parentFolderId, folder.parentFolderId),
-        isNull(folders.deletedAt),
-      ),
-    );
-
-    if (duplicateCount > 0) {
-      return { success: false, code: "DUPLICATE_NAME" };
-    }
-
-    const [updatedFolder] = await db
-      .update(folders)
-      .set({ name: normalizedName })
-      .where(and(eq(folders.id, folder.id), isNull(folders.deletedAt)))
-      .limit(1)
-      .returning();
-
-    if (!updatedFolder) {
-      return { success: false, code: "NOT_FOUND" };
-    }
-
-    return { success: true, data: updatedFolder };
-  } catch (error) {
-    console.error("Error renaming folder:", error);
-    return { success: false, code: "DATABASE_ERROR" };
-  }
+  return {
+    success: true,
+    data: {
+      id: result.data.id,
+      name: result.data.name,
+      parentFolderId: result.data.parentId,
+      createdAt: result.data.createdAt,
+    },
+  };
 }

@@ -1,4 +1,5 @@
-import db, { files, folders } from "@/infrastructure/db";
+import { randomUUID } from "crypto";
+import db, { storageBlobs, storageEntries } from "@/infrastructure/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { isFolderInActiveTree } from "@/application/storage/trash-visibility";
 import {
@@ -31,7 +32,7 @@ export async function createFiles(
   folderId: string,
 ): Promise<UploadFilesResult> {
   try {
-    const normalizedFolderId = folderId == "root" ? null : folderId;
+    const normalizedFolderId = folderId === "root" ? null : folderId;
 
     if (
       normalizedFolderId !== null &&
@@ -42,59 +43,94 @@ export async function createFiles(
 
     return db.transaction((tx) => {
       if (normalizedFolderId !== null) {
-        const [folderExists] = tx
-          .select({ id: folders.id })
-          .from(folders)
+        const [folder] = tx
+          .select({ id: storageEntries.id })
+          .from(storageEntries)
           .where(
-            and(eq(folders.id, normalizedFolderId), isNull(folders.deletedAt)),
+            and(
+              eq(storageEntries.id, normalizedFolderId),
+              eq(storageEntries.kind, "folder"),
+              isNull(storageEntries.deletedAt),
+            ),
           )
           .limit(1)
           .all();
 
-        if (!folderExists) {
-          return { success: false, code: "FOLDER_NOT_FOUND" };
+        if (!folder) {
+          return { success: false, code: "FOLDER_NOT_FOUND" } as const;
         }
       }
 
-      const existingFiles = tx
-        .select({ originalName: files.originalName })
-        .from(files)
+      const siblingFiles = tx
+        .select({ name: storageEntries.name })
+        .from(storageEntries)
         .where(
           and(
+            eq(storageEntries.kind, "file"),
             normalizedFolderId === null
-              ? isNull(files.folderId)
-              : eq(files.folderId, normalizedFolderId),
-            isNull(files.deletedAt),
+              ? isNull(storageEntries.parentId)
+              : eq(storageEntries.parentId, normalizedFolderId),
+            isNull(storageEntries.deletedAt),
           ),
         )
         .all();
 
       const usedNames = new Set(
-        existingFiles.map((file) => normalizeFileNameKey(file.originalName)),
+        siblingFiles.map((file) => normalizeFileNameKey(file.name)),
       );
 
-      const valuesToInsert = payloads.map((file) => ({
-        originalName: getAvailableFileName(file.originalName, usedNames),
+      const records = payloads.map((file) => ({
+        entryId: randomUUID(),
+        blobId: randomUUID(),
+        name: getAvailableFileName(file.originalName, usedNames),
         diskName: file.filename,
         size: file.size,
         mimeType: file.mimeType,
-        folderId: normalizedFolderId,
       }));
 
-      const insertedRows = tx
-        .insert(files)
-        .values(valuesToInsert)
-        .returning()
+      tx.insert(storageBlobs)
+        .values(
+          records.map((record) => ({
+            id: record.blobId,
+            diskName: record.diskName,
+            size: record.size,
+            mimeType: record.mimeType,
+          })),
+        )
+        .run();
+
+      const insertedEntries = tx
+        .insert(storageEntries)
+        .values(
+          records.map((record) => ({
+            id: record.entryId,
+            kind: "file" as const,
+            name: record.name,
+            parentId: normalizedFolderId,
+            blobId: record.blobId,
+          })),
+        )
+        .returning({
+          id: storageEntries.id,
+          createdAt: storageEntries.createdAt,
+        })
         .all();
 
-      const formattedFiles = insertedRows.map(
-        ({ originalName, diskName, ...file }) => ({
-          ...file,
-          name: originalName,
-        }),
+      const createdAtById = new Map(
+        insertedEntries.map((entry) => [entry.id, entry.createdAt]),
       );
 
-      return { success: true, data: formattedFiles };
+      return {
+        success: true,
+        data: records.map((record) => ({
+          id: record.entryId,
+          name: record.name,
+          mimeType: record.mimeType,
+          size: record.size,
+          folderId: normalizedFolderId,
+          createdAt: createdAtById.get(record.entryId)!,
+        })),
+      } as const;
     });
   } catch (error) {
     console.error("Error creating files:", error);

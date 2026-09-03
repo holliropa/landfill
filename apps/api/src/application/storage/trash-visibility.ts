@@ -1,56 +1,59 @@
-import db, { folders } from "@/infrastructure/db";
-import { eq } from "drizzle-orm";
+import db, { storageEntries } from "@/infrastructure/db";
+import { and, eq } from "drizzle-orm";
 
-export async function hasTrashedAncestor(
-  folderId: string | null,
-): Promise<boolean> {
-  let currentFolderId = folderId;
+export async function hasTrashedAncestor(parentId: string | null) {
+  let currentId = parentId;
 
-  while (currentFolderId !== null) {
-    const folder = await db.query.folders.findFirst({
-      where: { id: currentFolderId },
-      columns: {
-        id: true,
-        parentFolderId: true,
-        deletedAt: true,
-      },
-    });
+  while (currentId !== null) {
+    const [parent] = await db
+      .select({
+        kind: storageEntries.kind,
+        parentId: storageEntries.parentId,
+        deletedAt: storageEntries.deletedAt,
+      })
+      .from(storageEntries)
+      .where(eq(storageEntries.id, currentId))
+      .limit(1);
 
-    if (!folder || folder.deletedAt !== null) {
+    if (!parent || parent.kind !== "folder" || parent.deletedAt !== null) {
       return true;
     }
 
-    currentFolderId = folder.parentFolderId;
+    currentId = parent.parentId;
   }
 
   return false;
 }
 
+export async function isEntryInActiveTree(entry: {
+  deletedAt: Date | null;
+  parentId: string | null;
+}) {
+  if (entry.deletedAt !== null) return false;
+  return !(await hasTrashedAncestor(entry.parentId));
+}
+
 export async function isFileInActiveTree(file: {
   deletedAt: Date | null;
   folderId: string | null;
-}): Promise<boolean> {
-  if (file.deletedAt !== null) {
-    return false;
-  }
-
-  return !(await hasTrashedAncestor(file.folderId));
+}) {
+  return isEntryInActiveTree({
+    deletedAt: file.deletedAt,
+    parentId: file.folderId,
+  });
 }
 
-export async function isFolderInActiveTree(id: string): Promise<boolean> {
+export async function isFolderInActiveTree(id: string) {
   const [folder] = await db
     .select({
-      id: folders.id,
-      parentFolderId: folders.parentFolderId,
-      deletedAt: folders.deletedAt,
+      parentId: storageEntries.parentId,
+      deletedAt: storageEntries.deletedAt,
     })
-    .from(folders)
-    .where(eq(folders.id, id))
+    .from(storageEntries)
+    .where(and(eq(storageEntries.id, id), eq(storageEntries.kind, "folder")))
     .limit(1);
 
-  if (!folder || folder.deletedAt !== null) {
-    return false;
-  }
+  if (!folder) return false;
 
-  return !(await hasTrashedAncestor(folder.parentFolderId));
+  return isEntryInActiveTree(folder);
 }

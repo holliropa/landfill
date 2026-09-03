@@ -1,6 +1,5 @@
-import db, { files } from "@/infrastructure/db";
-import { and, eq, isNull, ne } from "drizzle-orm";
-import { hasTrashedAncestor } from "@/application/storage/trash-visibility";
+import db from "@/infrastructure/db";
+import { renameEntry } from "@/application/storage/entry-operations";
 
 export type RenameFileResult =
   | {
@@ -18,73 +17,40 @@ export type RenameFileResult =
   | {
       success: false;
       code:
-        | "INVALID_NAME"
-        | "FILE_NOT_FOUND"
-        | "DUPLICATE_NAME"
-        | "DATABASE_ERROR";
+        "INVALID_NAME" | "FILE_NOT_FOUND" | "DUPLICATE_NAME" | "DATABASE_ERROR";
     };
 
 export async function renameFile(
   fileId: string,
   newName: string,
 ): Promise<RenameFileResult> {
-  const normalizedName = newName.trim();
+  const result = await renameEntry(fileId, "file", newName);
 
-  if (!normalizedName) {
-    return { success: false, code: "INVALID_NAME" };
+  if (!result.success) {
+    return {
+      success: false,
+      code: result.code === "NOT_FOUND" ? "FILE_NOT_FOUND" : result.code,
+    } as RenameFileResult;
   }
 
-  try {
-    const [currentFile] = await db
-      .select({
-        id: files.id,
-        folderId: files.folderId,
+  const blob = result.data.blobId
+    ? await db.query.storageBlobs.findFirst({
+        where: { id: result.data.blobId },
       })
-      .from(files)
-      .where(and(eq(files.id, fileId), isNull(files.deletedAt)))
-      .limit(1);
+    : null;
 
-    if (!currentFile || (await hasTrashedAncestor(currentFile.folderId))) {
-      return { success: false, code: "FILE_NOT_FOUND" };
-    }
+  if (!blob) return { success: false, code: "DATABASE_ERROR" };
 
-    const duplicateCount = await db.$count(
-      files,
-      and(
-        eq(files.originalName, normalizedName),
-        ne(files.id, fileId),
-        currentFile.folderId === null
-          ? isNull(files.folderId)
-          : eq(files.folderId, currentFile.folderId),
-        isNull(files.deletedAt),
-      ),
-    );
-
-    if (duplicateCount > 0) {
-      return { success: false, code: "DUPLICATE_NAME" };
-    }
-
-    const [updatedFile] = await db
-      .update(files)
-      .set({ originalName: normalizedName })
-      .where(and(eq(files.id, fileId), isNull(files.deletedAt)))
-      .returning({
-        id: files.id,
-        name: files.originalName,
-        diskName: files.diskName,
-        size: files.size,
-        mimeType: files.mimeType,
-        createdAt: files.createdAt,
-        folderId: files.folderId,
-      });
-
-    if (!updatedFile) {
-      return { success: false, code: "FILE_NOT_FOUND" };
-    }
-
-    return { success: true, data: updatedFile };
-  } catch (error) {
-    console.error("Error renaming file:", error);
-    return { success: false, code: "DATABASE_ERROR" };
-  }
+  return {
+    success: true,
+    data: {
+      id: result.data.id,
+      name: result.data.name,
+      diskName: blob.diskName,
+      size: blob.size,
+      mimeType: blob.mimeType,
+      createdAt: result.data.createdAt,
+      folderId: result.data.parentId,
+    },
+  };
 }

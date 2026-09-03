@@ -18,26 +18,32 @@ export type GetFileResult =
 
 export async function getFile(id: string): Promise<GetFileResult> {
   try {
-    const file = await db.query.files.findFirst({
-      where: { id },
+    const entry = await db.query.storageEntries.findFirst({
+      where: { id, kind: "file" },
       with: {
-        folder: {
-          columns: { id: true, name: true },
-        },
+        blob: true,
+        parent: { columns: { id: true, name: true } },
       },
     });
 
-    if (!file) {
+    if (!entry || !entry.blob) {
       return { success: false, code: "FILE_NOT_FOUND" };
     }
-
-    const { folder, ...fileData } = file;
 
     return {
       success: true,
       data: {
-        ...fileData,
-        folder: folder ? { id: folder.id, name: folder.name } : null,
+        id: entry.id,
+        originalName: entry.name,
+        diskName: entry.blob.diskName,
+        size: entry.blob.size,
+        mimeType: entry.blob.mimeType,
+        deletedAt: entry.deletedAt,
+        createdAt: entry.createdAt,
+        folderId: entry.parentId,
+        folder: entry.parent
+          ? { id: entry.parent.id, name: entry.parent.name }
+          : null,
       },
     };
   } catch (error) {

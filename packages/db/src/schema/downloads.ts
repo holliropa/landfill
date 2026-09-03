@@ -1,4 +1,4 @@
-﻿import {
+import {
   AnySQLiteColumn,
   index,
   integer,
@@ -6,6 +6,7 @@
   text,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import { storageEntries } from "./filesystem.js";
 
 export const downloadJobs = sqliteTable("download_jobs", {
   id: text("id")
@@ -33,8 +34,11 @@ export const downloadJobItems = sqliteTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
 
-    itemKind: text("item_kind", { enum: ["file", "folder"] }).notNull(),
-    itemId: text("item_id").notNull(),
+    entryId: text("entry_id")
+      .notNull()
+      .references((): AnySQLiteColumn => storageEntries.id, {
+        onDelete: "cascade",
+      }),
 
     jobId: text("job_id")
       .notNull()
@@ -42,5 +46,8 @@ export const downloadJobItems = sqliteTable(
         onDelete: "cascade",
       }),
   },
-  (table) => [index("download_job_item_job_id_idx").on(table.jobId)],
+  (table) => [
+    index("download_job_item_job_id_idx").on(table.jobId),
+    index("download_job_item_entry_id_idx").on(table.entryId),
+  ],
 );

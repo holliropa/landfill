@@ -1,14 +1,8 @@
 import db, { downloadJobItems, downloadJobs } from "@/infrastructure/db";
-import { hasTrashedAncestor } from "@/application/storage/trash-visibility";
+import { isEntryInActiveTree } from "@/application/storage/trash-visibility";
 
 export type CreateDownloadJobResult =
-  | {
-      success: true;
-      data: {
-        id: string;
-        status: string;
-      };
-    }
+  | { success: true; data: { id: string; status: string } }
   | {
       success: false;
       code: "DATABASE_ERROR" | "NO_ITEMS_PROVIDED" | "ITEM_NOT_FOUND";
@@ -28,72 +22,37 @@ export async function createDownloadJob(
     }
 
     for (const item of items) {
-      if (item.kind === "file") {
-        const file = await db.query.files.findFirst({
-          where: { id: item.id },
-          columns: {
-            id: true,
-            folderId: true,
-            deletedAt: true,
-          },
-        });
-
-        if (
-          !file ||
-          file.deletedAt !== null ||
-          (await hasTrashedAncestor(file.folderId))
-        ) {
-          return { success: false, code: "ITEM_NOT_FOUND" };
-        }
-
-        continue;
-      }
-
-      const folder = await db.query.folders.findFirst({
-        where: { id: item.id },
-        columns: {
-          id: true,
-          parentFolderId: true,
-          deletedAt: true,
-        },
+      const entry = await db.query.storageEntries.findFirst({
+        where: { id: item.id, kind: item.kind },
+        columns: { id: true, parentId: true, deletedAt: true },
       });
 
-      if (
-        !folder ||
-        folder.deletedAt !== null ||
-        (await hasTrashedAncestor(folder.parentFolderId))
-      ) {
+      if (!entry || !(await isEntryInActiveTree(entry))) {
         return { success: false, code: "ITEM_NOT_FOUND" };
       }
     }
 
     return db.transaction((tx) => {
-      const createdJobResult = tx
+      const createdJob = tx
         .insert(downloadJobs)
-        .values({
-          status: "pending",
-        })
-        .returning({
-          id: downloadJobs.id,
-          status: downloadJobs.status,
-        })
+        .values({ status: "pending" })
+        .returning({ id: downloadJobs.id, status: downloadJobs.status })
         .get();
 
-      if (!createdJobResult) {
+      if (!createdJob) {
         return { success: false, code: "DATABASE_ERROR" };
       }
 
       tx.insert(downloadJobItems)
         .values(
           items.map((item) => ({
-            jobId: createdJobResult.id,
-            itemId: item.id,
-            itemKind: item.kind,
+            jobId: createdJob.id,
+            entryId: item.id,
           })),
         )
         .run();
 
-      return { success: true, data: createdJobResult };
+      return { success: true, data: createdJob };
     });
   } catch (error) {
     console.error("Error creating download job", error);

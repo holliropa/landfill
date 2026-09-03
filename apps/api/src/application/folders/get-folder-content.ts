@@ -1,5 +1,4 @@
-import db, { files, folders } from "@/infrastructure/db";
-import { and, eq, isNull } from "drizzle-orm";
+import db from "@/infrastructure/db";
 import { isFolderInActiveTree } from "@/application/storage/trash-visibility";
 
 export type GetFolderContentResult =
@@ -31,54 +30,38 @@ export async function getFolderContent(
       return { success: false, code: "FOLDER_NOT_FOUND" };
     }
 
-    const foldersResult = await db
-      .select({
-        id: folders.id,
-        name: folders.name,
-        parentFolderId: folders.parentFolderId,
-        createdAt: folders.createdAt,
-      })
-      .from(folders)
-      .where(
-        and(
-          folderId === null
-            ? isNull(folders.parentFolderId)
-            : eq(folders.parentFolderId, folderId),
-          isNull(folders.deletedAt),
-        ),
-      );
-
-    const filesResult = await db
-      .select({
-        id: files.id,
-        originalName: files.originalName,
-        size: files.size,
-        mimeType: files.mimeType,
-        createdAt: files.createdAt,
-      })
-      .from(files)
-      .where(
-        and(
-          folderId === null
-            ? isNull(files.folderId)
-            : eq(files.folderId, folderId),
-          isNull(files.deletedAt),
-        ),
-      );
-
-    return {
-      success: true,
-      data: {
-        files: filesResult.map(({ originalName, ...restFile }) => ({
-          ...restFile,
-          name: originalName,
-        })),
-        folders: foldersResult.map(({ parentFolderId, ...restFolder }) => ({
-          ...restFolder,
-          parentFolderId: parentFolderId ?? "root",
-        })),
+    const entries = await db.query.storageEntries.findMany({
+      where: {
+        parentId: folderId === null ? { isNull: true } : folderId,
+        deletedAt: { isNull: true },
       },
-    };
+      with: { blob: true },
+    });
+
+    const folders = entries
+      .filter((entry) => entry.kind === "folder")
+      .map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        parentFolderId: entry.parentId ?? "root",
+        createdAt: entry.createdAt,
+      }));
+
+    const files = entries.flatMap((entry) =>
+      entry.kind === "file" && entry.blob
+        ? [
+            {
+              id: entry.id,
+              name: entry.name,
+              size: entry.blob.size,
+              mimeType: entry.blob.mimeType,
+              createdAt: entry.createdAt,
+            },
+          ]
+        : [],
+    );
+
+    return { success: true, data: { files, folders } };
   } catch (error) {
     console.error("Error getting folder content:", error);
     return { success: false, code: "DATABASE_ERROR" };

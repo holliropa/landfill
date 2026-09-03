@@ -406,6 +406,66 @@ test("items move atomically without breaking folder trees", async () => {
   assert.ok(persistedDestination.files.some((file) => file.id === looseFileId));
 });
 
+test("folder trash operations keep descendants together and remove their blobs", async () => {
+  const folderId = await createTestFolder("Trash subtree");
+  const fileId = await uploadTextFile(
+    "subtree-file.txt",
+    "delete the entry and its blob",
+    folderId,
+  );
+
+  const trashFolderResponse = await authenticatedFetch(
+    `/api/folders/${folderId}`,
+    { method: "DELETE" },
+  );
+  assert.equal(trashFolderResponse.status, 200);
+
+  const trashResponse = await authenticatedFetch("/api/trash");
+  assert.equal(trashResponse.status, 200);
+  const trash = (await trashResponse.json()) as {
+    items: { id: string; kind: "file" | "folder" }[];
+  };
+  assert.ok(
+    trash.items.some((item) => item.id === folderId && item.kind === "folder"),
+  );
+  assert.equal(
+    trash.items.some((item) => item.id === fileId),
+    false,
+  );
+
+  const restoreResponse = await authenticatedFetch(
+    `/api/trash/folders/${folderId}/restore`,
+    { method: "POST" },
+  );
+  assert.equal(restoreResponse.status, 200);
+  assert.ok(
+    (await getTestFolderContent(folderId)).files.some(
+      (file) => file.id === fileId,
+    ),
+  );
+
+  assert.equal(
+    (
+      await authenticatedFetch(`/api/folders/${folderId}`, {
+        method: "DELETE",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await authenticatedFetch(`/api/trash/folders/${folderId}`, {
+        method: "DELETE",
+      })
+    ).status,
+    204,
+  );
+  assert.equal(
+    (await authenticatedFetch(`/api/files/${fileId}/raw`)).status,
+    404,
+  );
+});
+
 test("authentication can be reset for owner recovery", async () => {
   const { resetAuthentication } =
     await import("@/application/auth/auth-service");

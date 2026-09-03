@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { findFilesByName } from "@/application/search/find-files-by-name";
-import { findFoldersByName } from "@/application/search/find-folders-by-name";
+import { findEntriesByName } from "@/application/search/find-entries-by-name";
 import { getFolderPath } from "@/application/folders/get-folder-path";
 import {
   moveItems,
@@ -23,15 +22,13 @@ type StorageItem = {
 
 export async function searchItemsHandler(req: Request, res: Response) {
   const { query } = req.query as { query?: string };
-
   if (!query) return res.status(200).json([]);
 
   try {
-    const filesResult = await findFilesByName(query);
-    const matchedFiles = filesResult.success ? filesResult.data : [];
-
-    const foldersResult = await findFoldersByName(query);
-    const matchedFolders = foldersResult.success ? foldersResult.data : [];
+    const result = await findEntriesByName(query);
+    if (!result.success) {
+      return res.status(500).json({ error: "Failed to search items" });
+    }
 
     const locationPathPromises = new Map<
       string,
@@ -42,49 +39,35 @@ export async function searchItemsHandler(req: Request, res: Response) {
       if (cached) return cached;
 
       const pathPromise = getFolderPath(id === "root" ? null : id).then(
-        (result) => (result.success ? result.path : []),
+        (pathResult) => (pathResult.success ? pathResult.path : []),
       );
       locationPathPromises.set(id, pathPromise);
       return pathPromise;
     };
 
-    const items: StorageItem[] = await Promise.all([
-      ...matchedFolders.map(async (folder) => ({
-        id: folder.id,
-        kind: "folder" as const,
-        name: folder.name,
-        createdAt: folder.createdAt,
-        size: null,
-        mimeType: null,
-        location: {
-          id: folder.parentFolder ? folder.parentFolder.id : "root",
-          name: folder.parentFolder ? folder.parentFolder.name : "root",
-          path: await getLocationPath(
-            folder.parentFolder ? folder.parentFolder.id : "root",
-          ),
-        },
-      })),
-      ...matchedFiles.map(async (file) => ({
-        id: file.id,
-        kind: "file" as const,
-        name: file.originalName,
-        createdAt: file.createdAt,
-        size: file.size,
-        mimeType: file.mimeType,
-        location: {
-          id: file.folder ? file.folder.id : "root",
-          name: file.folder ? file.folder.name : "root",
-          path: await getLocationPath(file.folder ? file.folder.id : "root"),
-        },
-      })),
-    ]);
+    const items: StorageItem[] = await Promise.all(
+      result.data.map(async (entry) => {
+        const locationId = entry.parent?.id ?? "root";
+        return {
+          id: entry.id,
+          kind: entry.kind,
+          name: entry.name,
+          createdAt: entry.createdAt,
+          size: entry.size,
+          mimeType: entry.mimeType,
+          location: {
+            id: locationId,
+            name: entry.parent?.name ?? "root",
+            path: await getLocationPath(locationId),
+          },
+        };
+      }),
+    );
 
-    res.status(200).json({
-      items,
-    });
+    return res.status(200).json({ items });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: "Failed to search items" });
+    return res.status(500).json({ error: "Failed to search items" });
   }
 }
 

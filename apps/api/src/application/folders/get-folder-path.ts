@@ -1,4 +1,4 @@
-import db, { folders } from "@/infrastructure/db";
+import db, { storageEntries } from "@/infrastructure/db";
 import { and, eq, isNull } from "drizzle-orm";
 
 export type GetFolderPathResult =
@@ -14,37 +14,21 @@ export async function getFolderPath(
 
   try {
     const path: Array<{ id: string; name: string }> = [];
+    let currentId: string | null = id;
 
-    let [current] = await db
-      .select({
-        id: folders.id,
-        name: folders.name,
-        parentFolderId: folders.parentFolderId,
-      })
-      .from(folders)
-      .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
-      .limit(1);
-
-    if (!current) {
-      return { success: false, code: "FOLDER_NOT_FOUND" };
-    }
-
-    while (current) {
-      path.push({ id: current.id, name: current.name });
-
-      if (!current.parentFolderId) break;
-
-      [current] = await db
+    while (currentId !== null) {
+      const [current] = await db
         .select({
-          id: folders.id,
-          name: folders.name,
-          parentFolderId: folders.parentFolderId,
+          id: storageEntries.id,
+          name: storageEntries.name,
+          parentId: storageEntries.parentId,
         })
-        .from(folders)
+        .from(storageEntries)
         .where(
           and(
-            eq(folders.id, current.parentFolderId),
-            isNull(folders.deletedAt),
+            eq(storageEntries.id, currentId),
+            eq(storageEntries.kind, "folder"),
+            isNull(storageEntries.deletedAt),
           ),
         )
         .limit(1);
@@ -52,6 +36,9 @@ export async function getFolderPath(
       if (!current) {
         return { success: false, code: "FOLDER_NOT_FOUND" };
       }
+
+      path.push({ id: current.id, name: current.name });
+      currentId = current.parentId;
     }
 
     return {

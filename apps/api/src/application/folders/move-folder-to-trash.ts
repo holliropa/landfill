@@ -1,5 +1,4 @@
-import db, { folders } from "@/infrastructure/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { moveEntryToTrash } from "@/application/storage/entry-operations";
 
 export type MoveToTrashResult =
   | { success: true; data: { id: string; name: string } }
@@ -11,39 +10,15 @@ export type MoveToTrashResult =
 export async function moveFolderToTrash(
   id: string,
 ): Promise<MoveToTrashResult> {
-  try {
-    const [folder] = await db
-      .select({
-        id: folders.id,
-        name: folders.name,
-        deletedAt: folders.deletedAt,
-      })
-      .from(folders)
-      .where(eq(folders.id, id))
-      .limit(1);
+  const result = await moveEntryToTrash(id, "folder");
 
-    if (!folder) return { success: false, code: "FOLDER_NOT_FOUND" };
+  if (result.success) return result;
 
-    if (folder.deletedAt !== null) {
-      return { success: false, code: "FOLDER_IN_TRASH" };
-    }
-
-    const [deletedFolder] = await db
-      .update(folders)
-      .set({ deletedAt: new Date() })
-      .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
-      .returning({
-        id: folders.id,
-        name: folders.name,
-      });
-
-    if (!deletedFolder) {
-      return { success: false, code: "DATABASE_ERROR" };
-    }
-
-    return { success: true, data: deletedFolder };
-  } catch (error) {
-    console.error("Error moving folder to trash:", error);
-    return { success: false, code: "DATABASE_ERROR" };
-  }
+  const code =
+    result.code === "NOT_FOUND"
+      ? "FOLDER_NOT_FOUND"
+      : result.code === "ALREADY_IN_TRASH"
+        ? "FOLDER_IN_TRASH"
+        : "DATABASE_ERROR";
+  return { success: false, code };
 }

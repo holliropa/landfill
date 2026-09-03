@@ -1,27 +1,16 @@
-import db, {
-  downloadJobs,
-  files as dbFiles,
-  folders as dbFolders,
-} from "@/infrastructure/db";
+import db, { downloadJobs } from "@/infrastructure/db";
 import path from "path";
 import config from "@/config";
 import fs from "fs";
 import { ZipArchive } from "archiver";
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getFilePath } from "@/infrastructure/filesystem/get-file-path";
 import { isFileInActiveTree } from "@/application/storage/trash-visibility";
 import { getFile } from "@/application/files/get-file";
 import { getFolder } from "@/application/folders/get-folder";
 
-type DownloadItem = {
-  kind: "file" | "folder";
-  id: string;
-};
-
-type ArchiveEntry = {
-  filePath: string;
-  archivePath: string;
-};
+type DownloadItem = { kind: "file" | "folder"; id: string };
+type ArchiveEntry = { filePath: string; archivePath: string };
 
 export async function markArchiveJobFailed(jobId: string, error: unknown) {
   await db
@@ -46,15 +35,11 @@ export async function processArchiveJob(jobId: string) {
 
   const job = await db.query.downloadJobs.findFirst({
     where: { id: jobId },
-    columns: {
-      fileName: true,
-    },
+    columns: { fileName: true },
     with: {
       items: {
-        columns: {
-          itemId: true,
-          itemKind: true,
-        },
+        columns: {},
+        with: { entry: { columns: { id: true, kind: true } } },
       },
     },
   });
@@ -64,10 +49,9 @@ export async function processArchiveJob(jobId: string) {
   }
 
   const entries = await collectEntries(
-    job.items.map((item) => ({
-      kind: item.itemKind,
-      id: item.itemId,
-    })),
+    job.items.flatMap((item) =>
+      item.entry ? [{ kind: item.entry.kind, id: item.entry.id }] : [],
+    ),
   );
 
   if (entries.length === 0) {
@@ -75,13 +59,10 @@ export async function processArchiveJob(jobId: string) {
   }
 
   const archivePath = path.join(config.storage.downloadsDir, job.fileName);
-
   await writeZip(entries, archivePath, async (progress) => {
     await db
       .update(downloadJobs)
-      .set({
-        progress: progress,
-      })
+      .set({ progress })
       .where(eq(downloadJobs.id, jobId));
   });
 
@@ -101,7 +82,6 @@ async function collectEntries(items: DownloadItem[]) {
   for (const item of items) {
     if (item.kind === "file") {
       const fileResult = await getFile(item.id);
-
       if (!fileResult.success) continue;
       if (!(await isFileInActiveTree(fileResult.data))) continue;
 
@@ -110,8 +90,7 @@ async function collectEntries(items: DownloadItem[]) {
         archivePath: fileResult.data.originalName,
       });
     } else {
-      const folderEntries = await collectFolderEntries(item.id);
-      archiveEntries.push(...folderEntries);
+      archiveEntries.push(...(await collectFolderEntries(item.id)));
     }
   }
 
@@ -123,58 +102,35 @@ async function collectFolderEntries(
   basePath = "",
 ): Promise<ArchiveEntry[]> {
   const folderResult = await getFolder(folderId);
-
   if (!folderResult.success) return [];
 
   const folderPath = basePath
     ? `${basePath}/${folderResult.data.name}`
     : folderResult.data.name;
-
-  const files = await db
-    .select({
-      originalName: dbFiles.originalName,
-      diskName: dbFiles.diskName,
-    })
-    .from(dbFiles)
-    .where(
-      and(
-        eq(dbFiles.folderId, folderResult.data.id),
-        isNull(dbFiles.deletedAt),
-      ),
-    );
-
-  const childFolders = await db
-    .select({
-      id: dbFolders.id,
-      name: dbFolders.name,
-    })
-    .from(dbFolders)
-    .where(
-      and(
-        eq(dbFolders.parentFolderId, folderResult.data.id),
-        isNull(dbFolders.deletedAt),
-      ),
-    );
-
+  const children = await db.query.storageEntries.findMany({
+    where: {
+      parentId: folderResult.data.id,
+      deletedAt: { isNull: true },
+    },
+    with: { blob: { columns: { diskName: true } } },
+  });
   const archiveEntries: ArchiveEntry[] = [];
 
-  if (files.length === 0 && childFolders.length === 0) {
-    archiveEntries.push({
-      filePath: "",
-      archivePath: `${folderPath}/`,
-    });
+  if (children.length === 0) {
+    archiveEntries.push({ filePath: "", archivePath: `${folderPath}/` });
   }
 
-  for (const file of files) {
-    archiveEntries.push({
-      filePath: getFilePath(file.diskName),
-      archivePath: `${folderPath}/${file.originalName}`,
-    });
-  }
-
-  for (const childFolder of childFolders) {
-    const nested = await collectFolderEntries(childFolder.id, folderPath);
-    archiveEntries.push(...nested);
+  for (const child of children) {
+    if (child.kind === "file" && child.blob) {
+      archiveEntries.push({
+        filePath: getFilePath(child.blob.diskName),
+        archivePath: `${folderPath}/${child.name}`,
+      });
+    } else if (child.kind === "folder") {
+      archiveEntries.push(
+        ...(await collectFolderEntries(child.id, folderPath)),
+      );
+    }
   }
 
   return archiveEntries;
@@ -188,7 +144,6 @@ async function writeZip(
   await new Promise<void>((resolve, reject) => {
     const output = fs.createWriteStream(archivePath);
     const archive = new ZipArchive({ zlib: { level: 0 } });
-
     const progressUpdates: Promise<void>[] = [];
 
     output.on("close", async () => {
@@ -204,7 +159,6 @@ async function writeZip(
 
     const total = entries.length;
     let processed = 0;
-
     for (const entry of entries) {
       if (entry.archivePath.endsWith("/")) {
         archive.append("", { name: entry.archivePath });
@@ -213,7 +167,6 @@ async function writeZip(
       }
 
       processed += 1;
-
       if (onProgress) {
         const progress = Math.min(
           95,
