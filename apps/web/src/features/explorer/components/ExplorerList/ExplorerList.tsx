@@ -73,7 +73,14 @@ export function ExplorerList({
 }: ExplorerListProps) {
   const { controller, commands } = useExplorerContext();
   const { items, state, dispatch } = controller;
-  const [columns, setColumns] = useState(initialColumns);
+  const [columnState, setColumnState] = useState(() => ({
+    definition: initialColumns,
+    value: initialColumns,
+  }));
+  const columns =
+    columnState.definition === initialColumns
+      ? columnState.value
+      : initialColumns;
   const [draggedKeys, setDraggedKeys] = useState<Set<string>>(new Set());
   const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
   const openCommand = commands.find(
@@ -94,10 +101,6 @@ export function ExplorerList({
   const gridTemplateColumns = useMemo(() => {
     return columns.map((column) => `${column.width}px`).join(" ");
   }, [columns]);
-
-  useEffect(() => {
-    setColumns(initialColumns);
-  }, [initialColumns]);
 
   useEffect(() => {
     const focusedIndex = state.focusedIndex;
@@ -273,19 +276,27 @@ export function ExplorerList({
 
       const deltaX = moveEvent.clientX - dragState.startX;
 
-      setColumns((prev) =>
-        prev.map((column, index) => {
-          if (index !== dragState.columnIndex) return column;
+      setColumnState((currentState) => {
+        const currentColumns =
+          currentState.definition === initialColumns
+            ? currentState.value
+            : initialColumns;
 
-          return {
-            ...column,
-            width: Math.max(
-              column.minWidth ?? 80,
-              dragState.startWidth + deltaX,
-            ),
-          };
-        }),
-      );
+        return {
+          definition: initialColumns,
+          value: currentColumns.map((column, index) => {
+            if (index !== dragState.columnIndex) return column;
+
+            return {
+              ...column,
+              width: Math.max(
+                column.minWidth ?? 80,
+                dragState.startWidth + deltaX,
+              ),
+            };
+          }),
+        };
+      });
     }
 
     function handleMouseUp() {

@@ -22,6 +22,7 @@ export function SearchPage() {
       name: item.name,
       createdAt: item.createdAt,
       size: item.size,
+      mimeType: item.mimeType,
       location: item.location,
       ThumbnailComponent:
         item.kind === "folder" ? (

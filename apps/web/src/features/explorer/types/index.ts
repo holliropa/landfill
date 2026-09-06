@@ -7,6 +7,7 @@ export type ExplorerItem = {
   name: string;
   createdAt: Date;
   size: number | null;
+  mimeType?: string | null;
   location?: {
     id: string;
     name: string;

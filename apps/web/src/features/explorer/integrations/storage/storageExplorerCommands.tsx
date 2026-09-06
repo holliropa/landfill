@@ -11,6 +11,7 @@ import {
   FileEditIcon,
   FolderInputIcon,
   InfoIcon,
+  ImageIcon,
   Trash2Icon,
   TrashIcon,
 } from "lucide-react";
@@ -18,11 +19,13 @@ import type { StorageItemActions } from "./useStorageItemActions";
 
 type StorageExplorerCommandParams = {
   openFolder: (item: ExplorerItem) => void;
+  openImageLab?: (item: ExplorerItem) => void;
   storage: StorageItemActions;
 };
 
 export function createStorageExplorerCommands({
   openFolder,
+  openImageLab,
   storage,
 }: StorageExplorerCommandParams): ExplorerCommand[] {
   return [
@@ -112,6 +115,27 @@ export function createStorageExplorerCommands({
       },
     },
     {
+      id: "imageLab",
+      label: "Image Lab",
+      icon: <ImageIcon size={16} />,
+      surfaces: ["toolbar", "context-menu", "details"],
+      order: 40,
+      isVisible: (runtime) => {
+        const item = runtime.targetItems[0];
+        return (
+          Boolean(openImageLab) &&
+          runtime.targetItems.length === 1 &&
+          item?.kind === "file" &&
+          isImageLabCandidate(item)
+        );
+      },
+      run: (runtime) => {
+        const item = runtime.targetItems[0];
+        if (!openImageLab || !item || item.kind !== "file") return;
+        openImageLab(item);
+      },
+    },
+    {
       id: "details",
       label: "Details",
       icon: <InfoIcon size={16} />,
@@ -157,6 +181,18 @@ export function createStorageExplorerCommands({
       },
     },
   ];
+}
+
+function isImageLabCandidate(item: ExplorerItem) {
+  if (
+    item.mimeType === "image/jpeg" ||
+    item.mimeType === "image/png" ||
+    item.mimeType === "image/webp"
+  ) {
+    return true;
+  }
+
+  return /\.(jpe?g|png|webp)$/i.test(item.name);
 }
 
 export function createTrashExplorerCommands(

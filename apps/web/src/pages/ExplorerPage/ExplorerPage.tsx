@@ -25,6 +25,7 @@ export function ExplorerPage() {
       name: folder.name,
       createdAt: folder.createdAt,
       size: null,
+      mimeType: null,
       location: { id: normalizedFolderId, name: normalizedFolderId },
       ThumbnailComponent: <FolderIcon size={18} />,
     }));
@@ -36,6 +37,7 @@ export function ExplorerPage() {
       name: file.name,
       createdAt: file.createdAt,
       size: file.size,
+      mimeType: file.mimeType,
       location: { id: normalizedFolderId, name: normalizedFolderId },
       ThumbnailComponent: (
         <FileThumbnail

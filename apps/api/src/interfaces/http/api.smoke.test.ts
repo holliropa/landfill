@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
+import sharp from "sharp";
 
 const ownerPassword = "correct horse battery staple";
 
@@ -464,6 +465,122 @@ test("folder trash operations keep descendants together and remove their blobs",
     (await authenticatedFetch(`/api/files/${fileId}/raw`)).status,
     404,
   );
+});
+
+test("Image Lab previews and exports an ordinary sibling file", async () => {
+  const folderId = await createTestFolder("Image Lab files");
+  const sourceBuffer = await sharp({
+    create: {
+      width: 8,
+      height: 6,
+      channels: 4,
+      background: { r: 32, g: 120, b: 220, alpha: 0.5 },
+    },
+  })
+    .png()
+    .toBuffer();
+  const uploadBody = new FormData();
+  uploadBody.append(
+    "files",
+    new Blob([sourceBuffer], { type: "image/png" }),
+    "source.png",
+  );
+  uploadBody.append("folder", folderId);
+
+  const uploadResponse = await authenticatedFetch("/api/files", {
+    method: "POST",
+    body: uploadBody,
+  });
+  assert.equal(uploadResponse.status, 201);
+  const uploaded = (await uploadResponse.json()) as { id: string }[];
+  const sourceFileId = uploaded[0]?.id;
+  assert.ok(sourceFileId);
+
+  const sourceResponse = await authenticatedFetch(
+    `/api/image-lab/sources/${sourceFileId}`,
+  );
+  assert.equal(sourceResponse.status, 200);
+  assert.deepEqual(await sourceResponse.json(), {
+    id: sourceFileId,
+    name: "source.png",
+    mimeType: "image/png",
+    size: sourceBuffer.length,
+    width: 8,
+    height: 6,
+    hasAlpha: true,
+    supportedOutputs: ["jpeg", "png", "webp"],
+  });
+
+  const transform = {
+    sourceFileId,
+    output: { format: "jpeg", name: "source-export.png" },
+    resize: {
+      width: 4,
+      height: 4,
+      fit: "inside",
+      withoutEnlargement: true,
+    },
+    quality: 75,
+    background: "#ffffff",
+  };
+  const previewResponse = await jsonRequest(
+    `${baseUrl}/api/image-lab/preview`,
+    { method: "POST", body: transform },
+  );
+  assert.equal(previewResponse.status, 200);
+  assert.equal(previewResponse.headers.get("content-type"), "image/jpeg");
+  assert.equal(previewResponse.headers.get("x-landfill-output-width"), "4");
+  assert.equal(previewResponse.headers.get("x-landfill-output-height"), "3");
+  const previewMetadata = await sharp(
+    Buffer.from(await previewResponse.arrayBuffer()),
+  ).metadata();
+  assert.equal(previewMetadata.width, 4);
+  assert.equal(previewMetadata.height, 3);
+  assert.equal(previewMetadata.format, "jpeg");
+
+  const exportResponse = await jsonRequest(`${baseUrl}/api/image-lab/exports`, {
+    method: "POST",
+    body: transform,
+  });
+  assert.equal(exportResponse.status, 201);
+  const exported = (await exportResponse.json()) as {
+    id: string;
+    name: string;
+    mimeType: string;
+    width: number;
+    height: number;
+  };
+  assert.equal(exported.name, "source-export.jpg");
+  assert.equal(exported.mimeType, "image/jpeg");
+  assert.equal(exported.width, 4);
+  assert.equal(exported.height, 3);
+
+  const folderContent = await getTestFolderContent(folderId);
+  assert.ok(
+    folderContent.files.some(
+      (file) => file.id === exported.id && file.name === "source-export.jpg",
+    ),
+  );
+  const exportedRawResponse = await authenticatedFetch(
+    `/api/files/${exported.id}/raw`,
+  );
+  assert.equal(exportedRawResponse.status, 200);
+  const exportedMetadata = await sharp(
+    Buffer.from(await exportedRawResponse.arrayBuffer()),
+  ).metadata();
+  assert.equal(exportedMetadata.format, "jpeg");
+  assert.equal(exportedMetadata.width, 4);
+  assert.equal(exportedMetadata.height, 3);
+
+  const originalRawResponse = await authenticatedFetch(
+    `/api/files/${sourceFileId}/raw`,
+  );
+  const originalMetadata = await sharp(
+    Buffer.from(await originalRawResponse.arrayBuffer()),
+  ).metadata();
+  assert.equal(originalMetadata.format, "png");
+  assert.equal(originalMetadata.width, 8);
+  assert.equal(originalMetadata.height, 6);
 });
 
 test("authentication can be reset for owner recovery", async () => {
