@@ -23,6 +23,8 @@ export function FileThumbnail({ fileId, alt, mimeType }: FileThumbnailProps) {
         <img
           src={thumbnailUrl}
           alt={alt}
+          loading="lazy"
+          decoding="async"
           onError={() => setFailedFileId(fileId)}
           className={styles.thumbnail}
         />

@@ -4,12 +4,7 @@ import type { Dispatch, ReactNode } from "react";
 import type { ExplorerFileViewerApi } from "@/features/explorer/hooks";
 
 export type ExplorerSurface =
-  | "toolbar"
-  | "context-menu"
-  | "keyboard"
-  | "file-viewer"
-  | "item"
-  | "details";
+  "toolbar" | "context-menu" | "keyboard" | "file-viewer" | "item" | "details";
 
 export type ExplorerCommandShortcut = {
   key: string;

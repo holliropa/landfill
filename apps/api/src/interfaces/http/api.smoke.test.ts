@@ -496,6 +496,27 @@ test("Image Lab previews and exports an ordinary sibling file", async () => {
   const sourceFileId = uploaded[0]?.id;
   assert.ok(sourceFileId);
 
+  const galleryResponse = await authenticatedFetch("/api/storage/images");
+  assert.equal(galleryResponse.status, 200);
+  const gallery = (await galleryResponse.json()) as {
+    items: {
+      id: string;
+      kind: string;
+      mimeType: string;
+      location: { id: string; path: { id: string; name: string }[] };
+    }[];
+  };
+  const gallerySource = gallery.items.find((item) => item.id === sourceFileId);
+  assert.ok(gallerySource);
+  assert.equal(gallerySource.kind, "file");
+  assert.equal(gallerySource.mimeType, "image/png");
+  assert.equal(gallerySource.location.id, folderId);
+  assert.deepEqual(
+    gallerySource.location.path.map((part) => part.name),
+    ["root", "Image Lab files"],
+  );
+  assert.ok(gallery.items.every((item) => item.mimeType.startsWith("image/")));
+
   const sourceResponse = await authenticatedFetch(
     `/api/image-lab/sources/${sourceFileId}`,
   );
@@ -581,6 +602,120 @@ test("Image Lab previews and exports an ordinary sibling file", async () => {
   assert.equal(originalMetadata.format, "png");
   assert.equal(originalMetadata.width, 8);
   assert.equal(originalMetadata.height, 6);
+});
+
+test("chunked upload and content update workflow works over HTTP", async () => {
+  const folderId = await createTestFolder("Chunked upload folder");
+
+  const chunk1Data = "Chunk 1 content. ";
+  const chunk2Data = "Chunk 2 content. ";
+  const chunk3Data = "Chunk 3 content!";
+  const fullContent = chunk1Data + chunk2Data + chunk3Data;
+  const totalSize = Buffer.byteLength(fullContent);
+
+  // 1. Initialize chunked upload
+  const initResponse = await jsonRequest(
+    `${baseUrl}/api/files/upload/chunk-init`,
+    {
+      method: "POST",
+      body: {
+        filename: "large-resumable-file.txt",
+        totalSize,
+        mimeType: "text/plain",
+        folder: folderId,
+        chunkSize: 20,
+        totalChunks: 3,
+      },
+    },
+  );
+  assert.equal(initResponse.status, 200);
+  const initData = (await initResponse.json()) as {
+    uploadId: string;
+    totalChunks: number;
+    uploadedChunks: number[];
+  };
+  const uploadId = initData.uploadId;
+  assert.ok(uploadId);
+  assert.equal(initData.totalChunks, 3);
+  assert.deepEqual(initData.uploadedChunks, []);
+
+  // 2. Upload chunks 0 and 1
+  const uploadChunk = async (index: number, content: string) => {
+    const chunkForm = new FormData();
+    chunkForm.append("uploadId", uploadId);
+    chunkForm.append("chunkIndex", String(index));
+    chunkForm.append(
+      "chunk",
+      new Blob([content], { type: "text/plain" }),
+      `chunk_${index}.part`,
+    );
+    const res = await authenticatedFetch("/api/files/upload/chunk", {
+      method: "POST",
+      body: chunkForm,
+    });
+    assert.equal(res.status, 200);
+  };
+
+  await uploadChunk(0, chunk1Data);
+  await uploadChunk(1, chunk2Data);
+
+  // 3. Check status
+  const statusResponse = await authenticatedFetch(
+    `/api/files/upload/status/${uploadId}`,
+  );
+  assert.equal(statusResponse.status, 200);
+  const statusData = (await statusResponse.json()) as {
+    uploadedChunks: number[];
+  };
+  assert.deepEqual(statusData.uploadedChunks, [0, 1]);
+
+  // 4. Upload chunk 2
+  await uploadChunk(2, chunk3Data);
+
+  // 5. Complete chunked upload
+  const completeResponse = await jsonRequest(
+    `${baseUrl}/api/files/upload/chunk-complete`,
+    {
+      method: "POST",
+      body: { uploadId },
+    },
+  );
+  assert.equal(completeResponse.status, 201);
+  const uploadedFile = (await completeResponse.json()) as {
+    id: string;
+    name: string;
+    size: number;
+  };
+  assert.equal(uploadedFile.name, "large-resumable-file.txt");
+  assert.equal(uploadedFile.size, totalSize);
+
+  // 6. Verify file raw content
+  const rawRes = await authenticatedFetch(`/api/files/${uploadedFile.id}/raw`);
+  assert.equal(rawRes.status, 200);
+  const rawText = await rawRes.text();
+  assert.equal(rawText, fullContent);
+
+  // 7. Test updating file content (used by Text/Document Lab)
+  const updatedContent = "Updated text document content for Lab!";
+  const updateResponse = await jsonRequest(
+    `${baseUrl}/api/files/${uploadedFile.id}/content`,
+    {
+      method: "PUT",
+      body: { content: updatedContent, mimeType: "text/plain" },
+    },
+  );
+  assert.equal(updateResponse.status, 200);
+  const updatedFile = (await updateResponse.json()) as {
+    id: string;
+    size: number;
+  };
+  assert.equal(updatedFile.size, Buffer.byteLength(updatedContent));
+
+  const updatedRawRes = await authenticatedFetch(
+    `/api/files/${uploadedFile.id}/raw`,
+  );
+  assert.equal(updatedRawRes.status, 200);
+  assert.equal(await updatedRawRes.text(), updatedContent);
 });
 
 test("authentication can be reset for owner recovery", async () => {

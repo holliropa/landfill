@@ -1,5 +1,8 @@
 export { Explorer, type ExplorerProps } from "./Explorer";
 export {
+  createExplorerRuntime,
+  isExplorerCommandDisabled,
+  isExplorerCommandVisible,
   useExplorerCommand,
   useExplorerCommandList,
   useExplorerContext,

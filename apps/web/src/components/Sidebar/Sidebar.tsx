@@ -4,6 +4,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   HardDrive,
+  ImagesIcon,
   LayoutGrid,
   LogOut,
   Trash,
@@ -55,6 +56,13 @@ export function Sidebar() {
           active={location.pathname.startsWith("/folder")}
           Icon={<LayoutGrid size={22} />}
           label="All Files"
+        />
+        <SidebarItem
+          onClick={() => navigate(paths.galleryPath())}
+          isOpen={isOpen}
+          active={location.pathname === paths.galleryPath()}
+          Icon={<ImagesIcon size={22} />}
+          label="Images"
         />
         <SidebarItem
           onClick={() => navigate(paths.trashPath())}

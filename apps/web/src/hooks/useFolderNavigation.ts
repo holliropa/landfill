@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 export type FolderNavigationTarget = {
   id: string;
   name?: string;
+  revealItemKey?: string;
+  openFileId?: string;
 };
 
 export function useFolderNavigation() {
@@ -14,7 +16,15 @@ export function useFolderNavigation() {
     (target?: string | FolderNavigationTarget) => {
       const folderId = typeof target === "string" ? target : target?.id;
 
-      navigate(paths.folderPath(folderId));
+      navigate(paths.folderPath(folderId), {
+        state:
+          typeof target === "object"
+            ? {
+                revealItemKey: target.revealItemKey,
+                openFileId: target.openFileId,
+              }
+            : undefined,
+      });
     },
     [navigate],
   );

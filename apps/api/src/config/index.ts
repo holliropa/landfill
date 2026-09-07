@@ -31,6 +31,7 @@ const databasePath = path.join(databaseDir, "main.db");
 const storageDir = path.resolve(dataDir, "storage");
 const uploadsDir = path.resolve(storageDir, "uploads");
 const downloadsDir = path.resolve(storageDir, "downloads");
+const tempUploadsDir = path.resolve(storageDir, "temp_uploads");
 
 for (const dir of [
   dataDir,
@@ -38,6 +39,7 @@ for (const dir of [
   storageDir,
   uploadsDir,
   downloadsDir,
+  tempUploadsDir,
 ]) {
   mkdirSync(dir, { recursive: true });
 }
@@ -62,6 +64,7 @@ export default {
     storageDir,
     uploadsDir,
     downloadsDir,
+    tempUploadsDir,
   },
 
   database: {

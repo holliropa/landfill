@@ -1,229 +1,154 @@
-# Landfill
+# Landfill 🗄️
 
-Landfill is a small, self-hosted file drop and browser. It gives one person one
-place to upload, organize, preview, find, and retrieve files through a browser.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-brightgreen.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57.svg)](https://www.sqlite.org/)
 
-![Landfill file explorer](docs/landfill-explorer.png)
+**Landfill** is a fast, self-hosted personal drive and file workbench. It gives one person a single place to upload, organize, preview, edit, transform, and retrieve files through a responsive browser interface.
 
-## What it does
+![Landfill File Explorer](docs/landfill-explorer.png)
 
-- Upload multiple files or drag them directly into a folder.
-- Create and browse nested folders.
-- Search files and folders by name.
-- See the full containing path for every search result.
-- Preview images, PDFs, audio, and video in the browser.
-- Rename files and folders.
-- Move one or several files and folders with a destination picker or by dragging
-  them onto a folder.
-- Sort folders and files by name, date, or size and keep that preference.
-- Download one file directly or prepare a ZIP from several items or folders.
-- Move items to trash, restore them, or delete them permanently.
-- Store metadata in SQLite and file contents on disk under one data directory.
-- Protect the instance with one local owner password.
+---
 
-Landfill deliberately targets a small single-instance installation. It is not
-a Dropbox replacement or collaboration suite.
+## 🌟 Key Highlights & Features
 
-## Quick start with Docker
+- **🚀 Zero-Friction Ingestion**:
+  - **Clipboard Ingest (`Ctrl+V` / `Cmd+V`)**: Paste screenshots directly from your clipboard as timestamped PNGs, or raw text as `.md` / `.txt` notes.
+  - **Resumable Chunked Uploads**: Automatically slices large multi-gigabyte files into 5MB chunks with retry and resumption support.
+  - **Drag-and-Drop**: Drop files or folders anywhere onto the browser window.
 
-Requirements: Docker with Compose support.
+- **🛠️ Dedicated Workspaces (Preview vs. Lab)**:
+  - **Universal File Viewer**: Ultra-low-latency preview for images (pan/zoom/rotate), audio (custom player with speed/looping), video, PDFs, and code.
+  - **Text Lab Workspace**: In-browser Markdown and text editor with live split-screen preview, document metrics, and smart transforms (JSON prettify/minify, line sorting, casing).
+  - **Image Lab Workspace**: Non-destructive image studio for resizing, visual cropping, rotating, and format conversions (WebP, PNG, JPEG) powered by Sharp.
 
-Optionally copy the root `.env.example` to `.env` to persist the published port
-and network binding. The example remains localhost-only; set
-`LANDFILL_BIND_ADDRESS=0.0.0.0` only for a trusted local network.
+- **🖼️ Recursive Media Gallery**:
+  - Automatically discovers all photos, videos, and audio tracks across your entire folder tree.
+  - Filter tabs (`All`, `Photos`, `Videos`, `Audio`) and full-screen auto-advancing slideshow mode.
+
+- **🔍 Deep Search & Navigation**:
+  - Instant substring search across all files and folders.
+  - Full ancestor breadcrumbs (`Root > Documents > Projects > notes.md`) for instant context and one-click folder jumping.
+
+- **📦 In-Process Async Archives**:
+  - Download single files directly, or batch-download multiple files/folders as compressed ZIP archives.
+  - Background queue runs in-process and resumes interrupted jobs across API restarts with zero external dependencies (no Redis needed).
+
+- **🔒 Hardened Single-Owner Security**:
+  - Memory-hard **scrypt** password hashing, SHA-256 database-backed session tokens, `HttpOnly` / `SameSite=Strict` cookies, and CSRF origin validation.
+  - Host-only disaster recovery command (`npm run auth:reset`).
+
+---
+
+## ⚡ 30-Second Quick Start (Docker Compose)
+
+The easiest way to run Landfill is using Docker Compose:
 
 ```sh
-docker compose up --build
-```
+# 1. Start Landfill (binds to 127.0.0.1:8080 by default)
+docker compose up -d --build
 
-Open <http://127.0.0.1:8080>. The database and uploaded files persist in the
-`landfill-api` Docker volume when the containers stop.
-
-On the first start, find the one-time owner setup code in the API logs:
-
-```sh
+# 2. View the one-time bootstrap setup code in API logs
 docker compose logs api
 ```
 
-Enter that code in the browser and choose an owner password of at least 12
-characters. The code is valid only until setup succeeds or the API restarts.
+1. Open **<http://127.0.0.1:8080>** in your browser.
+2. Enter the one-time setup code printed in the logs and choose your permanent password (min. 12 characters).
+3. Start dropping files!
 
-To use another local port:
+### Custom Port or Network Binding
 
-```sh
-LANDFILL_PORT=9000 docker compose up --build
-```
-
-PowerShell:
-
-```powershell
-$env:LANDFILL_PORT = "9000"
-docker compose up --build
-```
-
-Stop Landfill without deleting its data:
+To expose Landfill to a trusted local network or use a custom port, copy `.env.example` to `.env`:
 
 ```sh
-docker compose down
+# Set binding to all interfaces for local network access
+LANDFILL_BIND_ADDRESS=0.0.0.0
+LANDFILL_PORT=9000
 ```
 
-Do not add `-v` unless you intend to permanently delete Landfill's database and
-stored files.
+---
 
-### Upgrading
+## 🏛️ System Architecture & Tech Stack
 
-Back up the `landfill-api` volume before upgrading. Then pull the new version
-and rebuild the containers:
+Landfill uses a clean monorepo structure orchestrated by Turborepo:
+
+```
+[ Browser Client ]
+       │
+       ▼
+[ Caddy Edge Proxy :80 / :8080 ]
+       ├── Static Files ──────► [ React 19 + Vite SPA ]
+       └── /api/* Proxy ──────► [ Express 5 REST API :3000 ]
+                                       │
+                        ┌──────────────┴──────────────┐
+                        ▼                             ▼
+               [ SQLite Database ]           [ Local Storage ]
+             (WAL Mode + Foreign Keys)      (DATA_DIR/storage/*)
+```
+
+| Component             | Path          | Technology Stack                                                                      |
+| :-------------------- | :------------ | :------------------------------------------------------------------------------------ |
+| **Frontend Web**      | `apps/web`    | React 19, TypeScript, Vite, TanStack Query, React Router 7, CSS Modules, Lucide Icons |
+| **Backend API**       | `apps/api`    | Node.js 22, Express 5, Multer, Sharp (libvips), Archiver, TypeScript                  |
+| **Database & Schema** | `packages/db` | SQLite (Better-SQLite3), Drizzle ORM, Automated Migration Runner                      |
+| **Reverse Proxy**     | `infra/caddy` | Caddy 2 (Alpine Linux)                                                                |
+
+---
+
+## 📚 Complete Documentation Index
+
+For in-depth architectural guides, workflows, API specifications, and deployment runbooks:
+
+- 🏗️ **[System Architecture & Design Philosophy](docs/ARCHITECTURE.md)**: Deep dive into the decoupled storage engine (`storage_blobs` vs `storage_entries`), in-process async queue, and relational schema.
+- 📖 **[Features, Workflows & User Guide](docs/FEATURES_AND_WORKFLOWS.md)**: Comprehensive tour of File Explorer, Resumable Uploads, Text Lab, Image Lab, Gallery, Search, and Trash.
+- 🔌 **[REST API Reference](docs/API_REFERENCE.md)**: Complete endpoint catalog, request/response formats, parameters, and HTTP error codes.
+- 🛡️ **[Security Model & Threat Assessment](docs/SECURITY.md)**: Single-owner threat model, scrypt parameters, session lifecycle, CSRF defense, and reverse-proxy TLS hardening.
+- 🚀 **[Deployment, Operations & Backups](docs/DEPLOYMENT_AND_OPERATIONS.md)**: Production configurations, environment variables reference, volume management, live backups, and disaster recovery.
+- 💻 **[Developer Guide & Local Workflows](docs/DEVELOPMENT.md)**: Local development setup, testing strategies, running smoke tests, and Drizzle migrations.
+
+---
+
+## 🛠️ Local Development
+
+Requirements: **Node.js >= 22.12.0** and **npm 10.9.2+**.
 
 ```sh
-docker compose down --remove-orphans
-docker compose up --build -d --remove-orphans
-```
-
-Do not add `-v`: Landfill automatically applies any required database migrations
-in the `landfill-api` volume and preserves its files. When upgrading from v0.1,
-read the one-time setup code from `docker compose logs api` and create the owner
-password. Upgrading from v0.2 to v0.3 requires no new setup and no schema
-migration.
-
-## Security model
-
-Landfill v0.3 has one local owner account. There are no usernames, invitations,
-sharing accounts, or password-reset emails. The owner password is scrypt-hashed
-in SQLite. Browser sessions use random tokens; only their SHA-256 hashes are
-stored. Sessions expire after seven idle days or 30 days total.
-
-The session cookie is HttpOnly and SameSite=Strict. Landfill also rejects
-browser mutations whose `Origin` does not match the request host and throttles
-failed setup and sign-in attempts. The health endpoint and the endpoints needed
-to set up or sign in are the only public API endpoints.
-
-Docker binds to `127.0.0.1` by default. Built-in authentication protects the
-files, but the default site uses plain HTTP and does not encrypt traffic.
-
-For an explicitly trusted private network, set `LANDFILL_BIND_ADDRESS=0.0.0.0`
-before starting Compose. Use a private VPN or an HTTPS reverse proxy for access
-across untrusted networks; do not expose the default HTTP listener directly to
-the public internet.
-
-`TRUST_PROXY` is the number of trusted reverse-proxy hops in front of the API.
-Compose sets it to `1` for its bundled Caddy proxy. `COOKIE_SECURE=auto` marks
-cookies secure when Express sees an HTTPS request. If TLS terminates in another
-proxy and HTTPS is not forwarded all the way to Express, explicitly set
-`COOKIE_SECURE=true` and configure that proxy to send the original scheme.
-
-### Owner password recovery
-
-If the owner password is lost, reset only the credentials and sessions. Files
-and folders are not removed:
-
-```sh
-docker compose exec api npm run auth:reset --workspace @landfill/api -- --yes
-docker compose restart api
-docker compose logs api
-```
-
-The reset command is intentionally available only on the host. After the API
-restarts, use the newly printed setup code in the browser and choose a new
-password. Anyone with access to run commands inside the API container already
-has administrative access to Landfill's data.
-
-## Data and backups
-
-The API stores all mutable state below `DATA_DIR`:
-
-```text
-DATA_DIR/
-  database/
-    main.db
-    main.db-wal
-    main.db-shm
-  storage/
-    uploads/
-    downloads/
-```
-
-For a consistent backup, stop Landfill and copy the complete data directory.
-Restore by putting that directory back in the same location before starting the
-same or a newer Landfill version.
-
-For Docker installations, archive the named volume while the containers are
-stopped. Uploaded files and the SQLite database must always be backed up and
-restored together.
-
-## Local development
-
-Requirements: Node.js 22.12 or newer and npm 10.9.2 or compatible.
-
-```sh
+# 1. Install dependencies
 npm ci
-```
 
-Copy the example environment files:
+# 2. Copy development configuration templates
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
 
-```text
-apps/api/.env.example -> apps/api/.env
-apps/web/.env.example -> apps/web/.env
-```
-
-Then run both development services:
-
-```sh
+# 3. Start development servers with hot-reload
 npm run dev
 ```
 
-Open <http://localhost:5173>. Vite proxies same-origin `/api` requests to the
-API target configured in `apps/web/.env`. The API terminal prints the initial
-owner setup code.
+Open <http://localhost:5173>. The terminal will output the initial owner setup code on first run.
 
-Useful checks:
+### Running Verification & Tests
 
 ```sh
-npm test
-npm run check-types
-npm run lint
-npm run build
+npm test              # Runs database tests & API end-to-end smoke test
+npm run check-types   # Validates TypeScript types across monorepo
+npm run lint          # Runs ESLint
+npm run build         # Production bundle build
 ```
 
-The API smoke test creates an isolated temporary data directory and exercises
-owner setup, session security and persistence, recovery, folder creation,
-upload, search, rename, movement and conflict safety, restart persistence,
-archive download, trash, and restore through real HTTP requests.
+---
 
-## Architecture
+## 🚫 Limitations & Non-Goals
 
-```text
-Browser
-  -> React + Vite static client
-  -> same-origin /api
-  -> Express API
-       -> owner password + server-side sessions
-       -> SQLite metadata
-       -> disk-backed uploads and generated ZIP files
-```
+Landfill deliberately focuses on single-owner simplicity:
 
-The npm workspace layout is:
+- **Single Owner Only**: No multi-tenant user accounts, invitations, or shared permission hierarchies.
+- **Self-Contained Storage**: No third-party S3/cloud dependencies; data stays local on disk.
+- **No Direct Internet Exposure**: Intended for localhost, VPN (Tailscale/WireGuard), or behind an authenticated/TLS-terminating reverse proxy.
 
-```text
-apps/web      React, React Router, TanStack Query
-apps/api      Express, Multer, Sharp, Archiver
-packages/db   Drizzle schema and bundled SQLite migrations
-infra/caddy   Production static hosting and /api reverse proxy
-```
+---
 
-Archive downloads run one at a time inside the API process. Their inputs and
-status live in SQLite, allowing pending work to resume after a restart without
-requiring a separate queue service.
+## 📄 License
 
-## Current limitations
-
-- One owner only; no multi-user accounts, sharing, or per-folder permissions.
-- No bundled TLS or direct public-internet deployment support.
-- No sharing links.
-- No storage quotas or duplicate-content detection.
-- Docker Compose is the supported packaged installation; native installers are
-  not currently planned.
-
-## License
-
-Landfill is available under the [MIT License](LICENSE).
+Landfill is open-source software licensed under the [MIT License](LICENSE).

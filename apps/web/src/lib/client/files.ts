@@ -4,6 +4,7 @@ import {
   getFileById,
   HttpError,
   renameFile,
+  updateFileContent,
   uploadFiles,
 } from "@/lib/client/api.ts";
 import { fileKeys, folderKeys } from "@/lib/client/keys.ts";
@@ -35,6 +36,32 @@ export function useRenameFile() {
   return useMutation({
     mutationFn: ({ fileId, newName }: { fileId: string; newName: string }) =>
       renameFile(fileId, newName),
+    onSuccess: async (_data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: folderKeys.content(_data.folderId ?? "root"),
+        }),
+        queryClient.invalidateQueries({ queryKey: fileKeys.byId(_data.id) }),
+        invalidateStorageQueries(),
+      ]);
+    },
+  });
+}
+
+export function useUpdateFileContent() {
+  const queryClient = useQueryClient();
+  const invalidateStorageQueries = useInvalidateStorageQueries();
+
+  return useMutation({
+    mutationFn: ({
+      fileId,
+      content,
+      mimeType,
+    }: {
+      fileId: string;
+      content: string;
+      mimeType?: string;
+    }) => updateFileContent(fileId, content, mimeType),
     onSuccess: async (_data) => {
       await Promise.all([
         queryClient.invalidateQueries({

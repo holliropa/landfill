@@ -9,6 +9,14 @@ import { createFiles } from "@/application/files/create-files";
 import { deleteFile } from "@/application/files/delete-file";
 import { getFile } from "@/application/files/get-file";
 import { renameFile } from "@/application/files/rename-file";
+import { updateFileContent } from "@/application/files/update-file-content";
+import {
+  cancelChunkedUpload,
+  completeChunkedUpload,
+  getChunkedUploadStatus,
+  initChunkedUpload,
+  saveUploadChunk,
+} from "@/application/files/chunked-upload";
 
 export async function uploadFilesHandler(req: Request, res: Response) {
   const uploadedFiles = req.files as Express.Multer.File[];
@@ -322,4 +330,177 @@ export async function streamRawFileHandler(req: Request, res: Response) {
     console.error("Error fetching file: ", error);
     return res.status(500).json({ error: "Failed to fetch file" });
   }
+}
+
+export async function initChunkedUploadHandler(req: Request, res: Response) {
+  const {
+    filename,
+    totalSize,
+    mimeType,
+    folder: folderId,
+    parentFolder,
+    chunkSize,
+    totalChunks,
+    uploadId,
+  } = req.body as {
+    filename: string;
+    totalSize: number;
+    mimeType?: string;
+    folder?: string;
+    parentFolder?: string;
+    chunkSize: number;
+    totalChunks: number;
+    uploadId?: string;
+  };
+
+  const targetFolder = folderId || parentFolder || "root";
+
+  if (
+    !filename ||
+    typeof totalSize !== "number" ||
+    !chunkSize ||
+    !totalChunks
+  ) {
+    return res.status(400).json({ error: "Invalid chunked upload parameters" });
+  }
+
+  const result = await initChunkedUpload({
+    filename,
+    totalSize,
+    mimeType,
+    folderId: targetFolder,
+    chunkSize,
+    totalChunks,
+    uploadId,
+  });
+
+  if (!result.success) {
+    if (result.code === "FOLDER_NOT_FOUND") {
+      return res.status(404).json({ error: "Folder not found" });
+    }
+    return res
+      .status(500)
+      .json({ error: "Failed to initialize upload session" });
+  }
+
+  return res.status(200).json(result.data);
+}
+
+export async function uploadChunkHandler(req: Request, res: Response) {
+  const uploadId = (req.body.uploadId || req.params.uploadId) as string;
+  const chunkIndex = Number(req.body.chunkIndex ?? req.params.chunkIndex);
+  const file = req.file;
+
+  if (!uploadId || Number.isNaN(chunkIndex) || !file) {
+    if (file) {
+      try {
+        fs.unlinkSync(file.path);
+      } catch {
+        // ignore
+      }
+    }
+    return res
+      .status(400)
+      .json({ error: "Missing chunk upload parameters or file" });
+  }
+
+  const result = await saveUploadChunk({
+    uploadId,
+    chunkIndex,
+    tempFilePath: file.path,
+  });
+
+  if (!result.success) {
+    if (result.code === "UPLOAD_SESSION_NOT_FOUND") {
+      return res.status(404).json({ error: "Upload session not found" });
+    }
+    return res
+      .status(400)
+      .json({ error: "Failed to save chunk", code: result.code });
+  }
+
+  return res.status(200).json(result.data);
+}
+
+export async function getChunkedUploadStatusHandler(
+  req: Request,
+  res: Response,
+) {
+  const { uploadId } = req.params as { uploadId: string };
+  if (!uploadId) {
+    return res.status(400).json({ error: "Upload ID is required" });
+  }
+
+  const result = getChunkedUploadStatus(uploadId);
+  if (!result.success) {
+    return res.status(404).json({ error: "Upload session not found" });
+  }
+
+  return res.status(200).json(result.data);
+}
+
+export async function completeChunkedUploadHandler(
+  req: Request,
+  res: Response,
+) {
+  const { uploadId } = req.body as { uploadId: string };
+  if (!uploadId) {
+    return res.status(400).json({ error: "Upload ID is required" });
+  }
+
+  const result = await completeChunkedUpload(uploadId);
+  if (!result.success) {
+    if (result.code === "UPLOAD_SESSION_NOT_FOUND") {
+      return res.status(404).json({ error: "Upload session not found" });
+    }
+    if (result.code === "FOLDER_NOT_FOUND") {
+      return res.status(404).json({ error: "Folder not found" });
+    }
+    return res
+      .status(400)
+      .json({ error: "Failed to complete chunked upload", details: result });
+  }
+
+  return res.status(201).json(result.data);
+}
+
+export async function cancelChunkedUploadHandler(req: Request, res: Response) {
+  const uploadId = (req.params.uploadId || req.body.uploadId) as string;
+  if (!uploadId) {
+    return res.status(400).json({ error: "Upload ID is required" });
+  }
+
+  cancelChunkedUpload(uploadId);
+  return res.status(200).json({ success: true });
+}
+
+export async function updateFileContentHandler(req: Request, res: Response) {
+  const { id } = req.params as { id: string };
+  const { content, mimeType } = req.body as {
+    content?: string;
+    mimeType?: string;
+  };
+
+  if (!id) {
+    return res.status(400).json({ error: "File ID is required" });
+  }
+
+  if (content === undefined || content === null) {
+    return res.status(400).json({ error: "Content is required" });
+  }
+
+  const result = await updateFileContent({
+    fileId: id,
+    content,
+    mimeType,
+  });
+
+  if (!result.success) {
+    if (result.code === "FILE_NOT_FOUND") {
+      return res.status(404).json({ error: "File not found" });
+    }
+    return res.status(500).json({ error: "Failed to update file content" });
+  }
+
+  return res.status(200).json(result.data);
 }

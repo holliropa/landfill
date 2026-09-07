@@ -12,8 +12,9 @@ import {
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ImageLabWorkspace } from "@/features/image-lab";
+import { TextLabWorkspace } from "@/features/text-lab";
 import styles from "./FolderExplorer.module.css";
 
 const toolbarCommandIds = [
@@ -21,6 +22,7 @@ const toolbarCommandIds = [
   "download",
   "move",
   "imageLab",
+  "textLab",
   "moveToTrash",
   "details",
 ] as const;
@@ -30,16 +32,23 @@ const contextMenuCommandIds = [
   "download",
   "move",
   "imageLab",
+  "textLab",
   "details",
   "moveToTrash",
 ] as const;
-const viewerCommandIds = ["download", "moveToTrash"] as const;
+const viewerCommandIds = [
+  "imageLab",
+  "textLab",
+  "download",
+  "moveToTrash",
+] as const;
 const detailsCommandIds = [
   "open",
   "rename",
   "download",
   "move",
   "imageLab",
+  "textLab",
   "moveToTrash",
 ] as const;
 
@@ -48,18 +57,24 @@ export function FolderExplorer({
   folderId,
   isLoading = false,
   isError = false,
+  requestedItemKey,
+  requestedFileId,
 }: {
   items: ExplorerItem[];
   folderId: string;
   isLoading?: boolean;
   isError?: boolean;
+  requestedItemKey?: string;
+  requestedFileId?: string;
 }) {
   const { sortedItems, sort, changeSort } = useExplorerSorting(items);
   const controller = useExplorerController({ items: sortedItems });
   const [imageLabFile, setImageLabFile] = useState<ExplorerItem | null>(null);
+  const [textLabFile, setTextLabFile] = useState<ExplorerItem | null>(null);
   const [pendingSelectionKey, setPendingSelectionKey] = useState<string | null>(
     null,
   );
+  const handledRequestRef = useRef<string | null>(null);
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
@@ -69,6 +84,7 @@ export function FolderExplorer({
       createStorageExplorerCommands({
         openFolder,
         openImageLab: setImageLabFile,
+        openTextLab: setTextLabFile,
         storage,
       }),
     [openFolder, storage],
@@ -86,6 +102,24 @@ export function FolderExplorer({
     const timeoutId = window.setTimeout(() => setPendingSelectionKey(null), 0);
     return () => window.clearTimeout(timeoutId);
   }, [controller, pendingSelectionKey, sortedItems]);
+
+  useEffect(() => {
+    const requestedKey =
+      requestedItemKey ??
+      (requestedFileId ? `file:${requestedFileId}` : undefined);
+    if (!requestedKey) return;
+    const requestToken = `${requestedKey}:${requestedFileId ?? "reveal"}`;
+    if (handledRequestRef.current === requestToken) return;
+
+    const requestedIndex = sortedItems.findIndex(
+      (item) => item.key === requestedKey,
+    );
+    if (requestedIndex < 0) return;
+
+    handledRequestRef.current = requestToken;
+    controller.dispatch({ type: "select-one", index: requestedIndex });
+    if (requestedFileId) controller.fileViewer.openFile(requestedFileId);
+  }, [controller, requestedFileId, requestedItemKey, sortedItems]);
 
   return (
     <div className={styles.root}>
@@ -166,6 +200,23 @@ export function FolderExplorer({
           onClose={() => setImageLabFile(null)}
           onExported={(output) => {
             setPendingSelectionKey(`file:${output.id}`);
+          }}
+          onShowExported={(output) => {
+            setPendingSelectionKey(`file:${output.id}`);
+          }}
+          onOpenExported={(output) => {
+            controller.fileViewer.openFile(output.id);
+          }}
+        />
+      )}
+
+      {textLabFile && (
+        <TextLabWorkspace
+          key={textLabFile.id}
+          file={textLabFile}
+          onClose={() => setTextLabFile(null)}
+          onSaved={() => {
+            setPendingSelectionKey(`file:${textLabFile.id}`);
           }}
         />
       )}

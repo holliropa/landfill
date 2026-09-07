@@ -1,7 +1,7 @@
 import styles from "./ExplorerPage.module.css";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useFolderContent } from "@/lib/client";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FolderIcon } from "lucide-react";
 import { FileThumbnail } from "@/components/FileThumbnail";
 import { FolderNavigationBar } from "@/components/FolderNavigationBar";
@@ -10,12 +10,26 @@ import { FolderExplorer } from "./FolderExplorer";
 
 export function ExplorerPage() {
   const { folderId } = useParams<{ folderId?: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [navigationRequest] = useState(
+    () =>
+      location.state as {
+        revealItemKey?: string;
+        openFileId?: string;
+      } | null,
+  );
   const normalizedFolderId = folderId ?? "root";
   const {
     data: folderContent,
     isLoading,
     isError,
   } = useFolderContent(normalizedFolderId);
+
+  useEffect(() => {
+    if (!location.state) return;
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   const items = useMemo<ExplorerItem[]>(() => {
     const folderItems = (folderContent?.folders ?? []).map((folder) => ({
@@ -62,6 +76,8 @@ export function ExplorerPage() {
           folderId={normalizedFolderId}
           isLoading={isLoading}
           isError={isError}
+          requestedItemKey={navigationRequest?.revealItemKey}
+          requestedFileId={navigationRequest?.openFileId}
         />
       </div>
     </div>

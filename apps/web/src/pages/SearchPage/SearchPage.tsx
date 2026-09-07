@@ -1,45 +1,21 @@
-﻿import { Navigate, useSearchParams } from "react-router-dom";
+import type { ExplorerItem } from "@/features/explorer";
+import { toStorageExplorerItem } from "@/features/explorer/integrations/storage";
 import { useStorageSearch } from "@/lib/client";
 import { useMemo } from "react";
-import { FolderIcon } from "lucide-react";
-import { FileThumbnail } from "@/components/FileThumbnail";
-import type { ExplorerItem } from "@/features/explorer";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { SearchExplorer } from "./SearchExplorer";
 
 export function SearchPage() {
   const [searchParams] = useSearchParams();
   const query = (searchParams.get("q") ?? "").trim();
-
   const { data: searchResult, isLoading, error } = useStorageSearch(query);
 
   const items = useMemo<ExplorerItem[]>(() => {
     if (isLoading || error || !searchResult) return [];
-
-    return searchResult.items.map((item) => ({
-      key: `${item.kind}:${item.id}`,
-      id: item.id,
-      kind: item.kind,
-      name: item.name,
-      createdAt: item.createdAt,
-      size: item.size,
-      mimeType: item.mimeType,
-      location: item.location,
-      ThumbnailComponent:
-        item.kind === "folder" ? (
-          <FolderIcon />
-        ) : (
-          <FileThumbnail
-            fileId={item.id}
-            alt={item.name}
-            mimeType={item.mimeType}
-          />
-        ),
-    }));
+    return searchResult.items.map(toStorageExplorerItem);
   }, [error, isLoading, searchResult]);
 
-  if (!query) {
-    return <Navigate to="/" replace />;
-  }
+  if (!query) return <Navigate to="/" replace />;
 
   return (
     <div
@@ -60,13 +36,7 @@ export function SearchPage() {
           userSelect: "none",
         }}
       >
-        <span
-          style={{
-            fontSize: "20px",
-          }}
-        >
-          Search results
-        </span>
+        <span style={{ fontSize: "20px" }}>Search results</span>
       </div>
       <div
         style={{

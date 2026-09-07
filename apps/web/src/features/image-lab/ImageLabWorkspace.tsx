@@ -17,6 +17,8 @@ import { formatSize } from "@/utils";
 import {
   AlertCircleIcon,
   CheckCircle2Icon,
+  ExternalLinkIcon,
+  FolderOpenIcon,
   ImageIcon,
   XIcon,
 } from "lucide-react";
@@ -40,12 +42,16 @@ export type ImageLabWorkspaceProps = {
   file: ExplorerItem;
   onClose: () => void;
   onExported?: (file: ImageLabExport) => void;
+  onShowExported?: (file: ImageLabExport) => void;
+  onOpenExported?: (file: ImageLabExport) => void;
 };
 
 export function ImageLabWorkspace({
   file,
   onClose,
   onExported,
+  onShowExported,
+  onOpenExported,
 }: ImageLabWorkspaceProps) {
   const backdropRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<HTMLElement | null>(null);
@@ -652,6 +658,30 @@ export function ImageLabWorkspace({
           >
             {exportedFile ? "Done" : "Cancel"}
           </Button>
+          {exportedFile && onShowExported && (
+            <Button
+              variant="outlined"
+              startIcon={<FolderOpenIcon size={16} />}
+              onClick={() => {
+                onShowExported(exportedFile);
+                onClose();
+              }}
+            >
+              Show in folder
+            </Button>
+          )}
+          {exportedFile && onOpenExported && (
+            <Button
+              variant="outlined"
+              startIcon={<ExternalLinkIcon size={16} />}
+              onClick={() => {
+                onOpenExported(exportedFile);
+                onClose();
+              }}
+            >
+              Open image
+            </Button>
+          )}
           <Button
             variant="contained"
             startIcon={

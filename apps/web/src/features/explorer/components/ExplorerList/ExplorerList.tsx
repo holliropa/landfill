@@ -105,8 +105,6 @@ export function ExplorerList({
   useEffect(() => {
     const focusedIndex = state.focusedIndex;
     if (focusedIndex === null) return;
-    if (!bodyRef.current?.contains(document.activeElement)) return;
-
     const container = containerRef.current;
     if (!container) return;
 

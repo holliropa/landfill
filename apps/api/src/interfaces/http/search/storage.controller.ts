@@ -5,6 +5,7 @@ import {
   moveItems,
   type StorageItemReference,
 } from "@/application/storage/move-items";
+import { listImages, listMedia } from "@/application/storage/list-images";
 
 type StorageItem = {
   id: string;
@@ -68,6 +69,58 @@ export async function searchItemsHandler(req: Request, res: Response) {
   } catch (error) {
     console.log(error);
     return res.status(500).json({ error: "Failed to search items" });
+  }
+}
+
+export async function listImagesHandler(req: Request, res: Response) {
+  try {
+    const isMediaRoute = req.path.includes("/media");
+    const requestedType = req.query.type as
+      "all" | "image" | "video" | "audio" | undefined;
+    const type = requestedType ?? (isMediaRoute ? "all" : "image");
+    const result = await listMedia(type);
+    if (!result.success) {
+      return res.status(500).json({ error: "Failed to list media" });
+    }
+
+    const locationPathPromises = new Map<
+      string,
+      Promise<{ id: string; name: string }[]>
+    >();
+    const getLocationPath = (id: string) => {
+      const cached = locationPathPromises.get(id);
+      if (cached) return cached;
+
+      const pathPromise = getFolderPath(id === "root" ? null : id).then(
+        (pathResult) => (pathResult.success ? pathResult.path : []),
+      );
+      locationPathPromises.set(id, pathPromise);
+      return pathPromise;
+    };
+
+    const items: StorageItem[] = await Promise.all(
+      result.data.map(async (entry) => {
+        const locationId = entry.parent?.id ?? "root";
+        return {
+          id: entry.id,
+          kind: "file",
+          name: entry.name,
+          createdAt: entry.createdAt,
+          size: entry.size,
+          mimeType: entry.mimeType,
+          location: {
+            id: locationId,
+            name: entry.parent?.name ?? "root",
+            path: await getLocationPath(locationId),
+          },
+        };
+      }),
+    );
+
+    return res.status(200).json({ items });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to list media" });
   }
 }
 

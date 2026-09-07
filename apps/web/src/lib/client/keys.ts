@@ -14,3 +14,8 @@ export const fileKeys = {
 export const trashKeys = {
   all: ["trash"] as const,
 };
+
+export const galleryKeys = {
+  all: ["gallery"] as const,
+  images: () => [...galleryKeys.all, "images"] as const,
+};

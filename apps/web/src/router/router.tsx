@@ -1,6 +1,7 @@
 ﻿import { MainLayout } from "@/layouts";
 import { ExplorerPage } from "@/pages/ExplorerPage";
 import { SearchPage } from "@/pages/SearchPage";
+import { GalleryPage } from "@/pages/GalleryPage";
 import { TrashPage } from "@/pages/TrashPage";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { paths } from "./paths";
@@ -25,6 +26,10 @@ export const router = createBrowserRouter([
       {
         path: "search",
         element: <SearchPage />,
+      },
+      {
+        path: "gallery",
+        element: <GalleryPage />,
       },
       {
         path: "trash",

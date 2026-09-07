@@ -126,3 +126,185 @@
     color: var(--text-muted);
     font-size: 14px;
 }
+
+.imageViewerWrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.imageCanvas {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.viewerControlsOverlay {
+    position: absolute;
+    bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    color: #fff;
+    z-index: 10;
+}
+
+.zoomLevelBadge {
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.zoomLevelBadge:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.customAudioPlayer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: min(100%, 520px);
+    padding: 32px 28px;
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--divider);
+}
+
+.audioCover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+    width: 100%;
+}
+
+.audioIcon {
+    color: var(--primary, #3b82f6);
+    background: var(--surface-hover, rgba(59, 130, 246, 0.1));
+    padding: 16px;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+}
+
+.audioTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.audioControls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.audioTimeline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.audioTime {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 36px;
+}
+
+.audioSeeker {
+    flex: 1;
+    cursor: pointer;
+    accent-color: var(--primary, #3b82f6);
+}
+
+.audioButtonRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.audioPlayBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--primary, #3b82f6);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.audioPlayBtn:hover {
+    transform: scale(1.05);
+    background: var(--primary-hover, #2563eb);
+}
+
+.audioControlBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.audioControlBtn:hover {
+    background: var(--surface-hover, rgba(0, 0, 0, 0.05));
+    color: var(--text);
+}
+
+.audioBtnActive {
+    color: var(--primary, #3b82f6) !important;
+}
+
+.audioRateBtn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--divider);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.audioRateBtn:hover {
+    background: var(--surface-hover, rgba(0, 0, 0, 0.05));
+}

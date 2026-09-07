@@ -83,25 +83,163 @@ export async function getFolderContent(
   };
 }
 
+const CHUNK_THRESHOLD_BYTES = 5 * 1024 * 1024; // 5MB
+const CHUNK_SIZE_BYTES = 2.5 * 1024 * 1024; // 2.5MB chunks
+
+export async function uploadSingleFileChunked(
+  file: File,
+  folderId: string,
+  onProgress?: (percent: number) => void,
+): Promise<FileItem> {
+  const totalSize = file.size;
+  const totalChunks = Math.max(1, Math.ceil(totalSize / CHUNK_SIZE_BYTES));
+
+  const initResponse = await apiFetch(
+    `${config.api.url}/files/upload/chunk-init`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filename: file.name,
+        totalSize,
+        mimeType: file.type || "application/octet-stream",
+        folder: folderId,
+        chunkSize: CHUNK_SIZE_BYTES,
+        totalChunks,
+      }),
+    },
+  );
+
+  if (!initResponse.ok) {
+    throw new Error("Failed to initialize chunked upload");
+  }
+
+  const { uploadId, uploadedChunks = [] } = (await initResponse.json()) as {
+    uploadId: string;
+    uploadedChunks: number[];
+  };
+
+  const uploadedSet = new Set<number>(uploadedChunks);
+
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+    if (uploadedSet.has(chunkIndex)) {
+      onProgress?.(Math.round(((chunkIndex + 1) / totalChunks) * 100));
+      continue;
+    }
+
+    const start = chunkIndex * CHUNK_SIZE_BYTES;
+    const end = Math.min(start + CHUNK_SIZE_BYTES, totalSize);
+    const chunkBlob = file.slice(start, end);
+
+    let attempts = 0;
+    let success = false;
+    while (attempts < 3 && !success) {
+      try {
+        attempts++;
+        const chunkForm = new FormData();
+        chunkForm.append("uploadId", uploadId);
+        chunkForm.append("chunkIndex", String(chunkIndex));
+        chunkForm.append("chunk", chunkBlob, `chunk_${chunkIndex}`);
+
+        const chunkResponse = await apiFetch(
+          `${config.api.url}/files/upload/chunk`,
+          {
+            method: "POST",
+            body: chunkForm,
+          },
+        );
+
+        if (!chunkResponse.ok) {
+          throw new Error(
+            `Chunk ${chunkIndex} failed with status ${chunkResponse.status}`,
+          );
+        }
+
+        success = true;
+        uploadedSet.add(chunkIndex);
+        onProgress?.(Math.round((uploadedSet.size / totalChunks) * 100));
+      } catch (err) {
+        if (attempts >= 3) throw err;
+        await new Promise((r) => setTimeout(r, 400 * attempts));
+      }
+    }
+  }
+
+  const completeResponse = await apiFetch(
+    `${config.api.url}/files/upload/chunk-complete`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ uploadId }),
+    },
+  );
+
+  if (!completeResponse.ok) {
+    throw new Error("Failed to finalize chunked upload");
+  }
+
+  const data = (await completeResponse.json()) as FileItemPayload;
+  return normalizeFileItem(data);
+}
+
 export async function uploadFiles(
   files: File[],
   folderId: string,
 ): Promise<FileItem[]> {
-  const formData = new FormData();
-  files.forEach((file) => formData.append("files", file));
-  formData.append("folder", folderId);
+  const largeFiles = files.filter((f) => f.size >= CHUNK_THRESHOLD_BYTES);
+  const smallFiles = files.filter((f) => f.size < CHUNK_THRESHOLD_BYTES);
 
-  const response = await apiFetch(`${config.api.url}/files`, {
-    method: "POST",
-    body: formData,
+  const results: FileItem[] = [];
+
+  if (smallFiles.length > 0) {
+    const formData = new FormData();
+    smallFiles.forEach((file) => formData.append("files", file));
+    formData.append("folder", folderId);
+
+    const response = await apiFetch(`${config.api.url}/files`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload files");
+    }
+
+    const data = (await response.json()) as FileItemPayload[];
+    results.push(...data.map(normalizeFileItem));
+  }
+
+  for (const largeFile of largeFiles) {
+    const uploaded = await uploadSingleFileChunked(largeFile, folderId);
+    results.push(uploaded);
+  }
+
+  return results;
+}
+
+export async function updateFileContent(
+  fileId: string,
+  content: string,
+  mimeType?: string,
+): Promise<FileItem> {
+  const response = await apiFetch(`${config.api.url}/files/${fileId}/content`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ content, mimeType }),
   });
 
   if (!response.ok) {
-    throw new Error("Failed to upload files");
+    throw new Error("Failed to update file content");
   }
 
-  const data = (await response.json()) as FileItemPayload[];
-  return data.map(normalizeFileItem);
+  const data = (await response.json()) as FileItemPayload;
+  return normalizeFileItem(data);
 }
 
 export function getFileDownloadUrl(fileId: string) {
@@ -254,6 +392,21 @@ export async function searchItems(query: string): Promise<SearchResult> {
 
   if (!response.ok) {
     throw new Error("Failed to search items");
+  }
+
+  const data = (await response.json()) as { items: StorageItemPayload[] };
+  return { items: data.items.map(normalizeStorageItem) };
+}
+
+export async function getGalleryImages(
+  type: "all" | "image" | "video" | "audio" = "all",
+): Promise<SearchResult> {
+  const response = await apiFetch(
+    `${config.api.url}/storage/media?type=${type}`,
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to load images");
   }
 
   const data = (await response.json()) as { items: StorageItemPayload[] };

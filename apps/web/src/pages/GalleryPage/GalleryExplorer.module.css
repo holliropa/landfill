@@ -1,0 +1,380 @@
+.header {
+  display: flex;
+  min-height: 72px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--divider);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+}
+
+.heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.headingIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-elevated);
+  color: var(--input-focus);
+}
+
+.heading h1,
+.heading p {
+  margin: 0;
+}
+
+.heading h1 {
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.heading p {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.mediaFilterTabs {
+  display: flex;
+  align-items: center;
+  background: var(--surface-elevated, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.filterTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterTab:hover {
+  color: var(--text);
+}
+
+.filterTabActive {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.slideshowButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-right: 6px;
+}
+
+.slideshowButton:hover:not(:disabled) {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.05));
+  border-color: var(--input-focus);
+}
+
+.slideshowButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sortControls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.sortControls select {
+  min-height: 34px;
+  padding: 0 28px 0 9px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  font: inherit;
+}
+
+.selectionHint {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 220px));
+  grid-auto-rows: max-content;
+  align-content: start;
+  justify-content: start;
+  gap: 14px;
+  padding: 18px;
+  overflow: auto;
+  outline: none;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+  cursor: default;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.card:hover {
+  border-color: var(--border);
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+}
+
+.card[data-focused] {
+  outline: 2px solid color-mix(in srgb, var(--input-focus) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.selectedCard,
+.selectedCard:hover {
+  border-color: color-mix(in srgb, var(--input-focus) 65%, var(--border));
+  background: color-mix(in srgb, var(--input-focus) 12%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus) 20%, transparent);
+}
+
+.thumbnail {
+  aspect-ratio: 4 / 3;
+  flex: 0 0 auto;
+  padding: 8px;
+  background:
+    linear-gradient(45deg, var(--divider-subtle) 25%, transparent 25%) 0 0 /
+      16px 16px,
+    linear-gradient(45deg, transparent 75%, var(--divider-subtle) 75%) 0 0 /
+      16px 16px,
+    linear-gradient(45deg, transparent 75%, var(--divider-subtle) 75%) -8px
+      8px / 16px 16px,
+    linear-gradient(
+        45deg,
+        var(--divider-subtle) 25%,
+        var(--surface-elevated) 25%
+      )
+      8px -8px / 16px 16px;
+}
+
+.thumbnail > * {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.thumbnail img {
+  object-fit: contain;
+}
+
+.cardBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 11px 12px;
+}
+
+.cardBody strong,
+.location,
+.meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardBody strong {
+  font-size: 14px;
+}
+
+.location {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--input-focus);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.location:hover,
+.location:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.loadMoreRow {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: center;
+  padding: 4px 0 12px;
+}
+
+.loadMoreRow button {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.loadMoreRow button:hover {
+  background: var(--surface-hover);
+}
+
+.loadMoreRow button:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+
+.loadMoreRow span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.message {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  padding: 32px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.message strong {
+  color: var(--text);
+}
+
+.message span {
+  max-width: 340px;
+  font-size: 13px;
+}
+
+.skeleton {
+  min-height: 240px;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.skeleton span,
+.skeleton i {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-hover),
+    var(--surface-elevated),
+    var(--surface-hover)
+  );
+  background-size: 200% 100%;
+  animation: gallery-loading 1.2s ease-in-out infinite;
+}
+
+.skeleton span {
+  height: 180px;
+}
+
+.skeleton i {
+  width: 72%;
+  height: 11px;
+  margin: 12px 3px 0;
+}
+
+.skeleton i:last-child {
+  width: 45%;
+  margin-top: 8px;
+}
+
+@keyframes gallery-loading {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sortControls {
+    width: 100%;
+  }
+
+  .sortControls select {
+    flex: 1;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 10px;
+    padding: 12px;
+  }
+}

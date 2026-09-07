@@ -1,5 +1,8 @@
 export {
   Explorer,
+  createExplorerRuntime,
+  isExplorerCommandDisabled,
+  isExplorerCommandVisible,
   useExplorerCommand,
   useExplorerCommandList,
   useExplorerContext,

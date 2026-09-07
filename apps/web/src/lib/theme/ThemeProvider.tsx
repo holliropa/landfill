@@ -31,7 +31,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setPreferenceState(nextPreference);
   }, []);
 
-  const clearPreference = useCallback(() => { 
+  const clearPreference = useCallback(() => {
     setPreference(null);
   }, [setPreference]);
 
