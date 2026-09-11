@@ -216,3 +216,37 @@ The Image Lab provides on-the-fly previews and non-destructive exports powered b
   - Format conversions (JPEG, PNG, WebP) with configurable quality and compression levels.
 - **Fast Preview Pipeline**: Renders in-memory scaled down previews without writing intermediate files to disk.
 - **Export Pipeline**: Writes a new physical blob to disk and inserts a new sibling entry (e.g. `image_transformed.webp`) in the same or target folder.
+
+---
+
+## 7. ZIP Inspection & Extraction (Archive Lab)
+
+Archive Lab reads ZIP central-directory metadata lazily with `yauzl`, allowing the web client to display a complete archive tree without first unpacking the file. Individual members are streamed directly from the source ZIP for download.
+
+Extraction is staged into generated UUID disk files and registered in one SQLite transaction. The operation creates a new collision-safe root folder in the selected destination, recreates the selected directory hierarchy, and then inserts the associated `storage_blobs` and `storage_entries`. If streaming or registration fails, staged disk files are removed.
+
+Entry paths are normalized before display or extraction. Absolute paths, parent traversal, empty paths, symbolic links, encrypted members, unsupported compression methods, and archives exceeding the entry limit are rejected or marked unsupported before storage is mutated.
+
+The **Create ZIP** action reuses the asynchronous download-job pipeline. Once compression finishes, the API copies the prepared archive into permanent upload storage and registers it as a regular `application/zip` blob and file entry in the chosen folder.
+
+---
+
+## 8. Capability Modules and Routed Workspaces
+
+Landfill is deployed as a modular monolith. Drive core owns authentication, the namespace, immutable blobs, and transactional writes. Format-specific modules own inspection and transformation rules. Archive and Image code obtain content through the Drive application boundary rather than querying storage tables or constructing physical paths themselves. Archive extraction likewise submits a staged file tree to Drive core for registration.
+
+The web application composes file support through a static capability registry. A capability declares its file matcher, optional preview renderer, optional lazy-loaded workspace, command metadata, and any custom default-open behavior. The Explorer consumes these declarations without importing individual Labs. Image, Text, and Archive workspaces are independently split browser chunks hosted by stable routes:
+
+```text
+/labs/image/:fileId
+/labs/text/:fileId
+/labs/archive/:fileId
+```
+
+This is a plugin boundary within one trusted build. It provides independent feature ownership and code splitting without runtime remote-code loading or separate service operations.
+
+### Archive Virtual Filesystem
+
+Opening a ZIP navigates to `/archive/:fileId/*`. The archive provider converts normalized ZIP paths into read-only virtual Explorer items and synthesizes directory nodes when the ZIP has no explicit directory record. These nodes are not inserted into `storage_entries`; extraction is the operation that materializes them in the Drive namespace.
+
+Archive indexes are cached by immutable `storage_blobs.id`. Member content URLs include that revision identifier, and the API rejects a stream if the file entry points to a different blob by the time it is opened. Entry-count, expanded-size, individual-size, compression-ratio, path, encryption, and symbolic-link checks protect browsing and extraction.

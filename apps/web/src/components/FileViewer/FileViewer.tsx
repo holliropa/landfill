@@ -15,11 +15,14 @@ import {
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut.ts";
+import type { ExplorerItem } from "@/features/explorer";
+import type { FileResponse } from "@/lib/client/api";
 
 const FILE_NAME_DISPLAY_LIMIT = 38;
 
 export type FileViewerProps = {
   fileId: string;
+  file?: ExplorerItem;
   name?: string;
   onClose: () => void;
 
@@ -87,6 +90,7 @@ function CopyFileNameButton({ fileName }: { fileName: string }) {
 
 export function FileViewer({
   fileId,
+  file,
   name,
   onClose,
   navigation,
@@ -102,7 +106,30 @@ export function FileViewer({
   });
   useKeyboardShortcut("Escape", onClose);
 
-  const { data: fileData, isLoading, error } = useFile(fileId);
+  const isVirtualFile = Boolean(file?.contentUrl);
+  const {
+    data: storedFileData,
+    isLoading,
+    error,
+  } = useFile(fileId, {
+    enabled: !isVirtualFile,
+  });
+  const virtualFileData: FileResponse | undefined =
+    file?.contentUrl && file.kind === "file"
+      ? {
+          id: file.id,
+          name: file.name,
+          sizeBytes: file.size ?? 0,
+          mimeType: file.mimeType ?? "application/octet-stream",
+          folder: {
+            id: file.location?.id ?? "root",
+            name: file.location?.name ?? "root",
+          },
+          createdAt: file.createdAt,
+          contentUrl: file.contentUrl,
+        }
+      : undefined;
+  const fileData = virtualFileData ?? storedFileData;
   const fileName = fileData?.name ?? name ?? "Loading...";
   const displayedFileName = formatFileName(fileName);
 
@@ -181,7 +208,7 @@ export function FileViewer({
         </div>
       </div>
       <div className={styles.mediaContainer}>
-        {isLoading && (
+        {isLoading && !isVirtualFile && (
           <div className={styles.loadingStatus}>
             <SpinnerIcon size={28} />
             <span>Loading...</span>
@@ -195,7 +222,12 @@ export function FileViewer({
         {!isLoading && !error && !fileData && (
           <div className={styles.status}>File not found</div>
         )}
-        {fileData && <FileViewerContent file={fileData} />}
+        {fileData && (
+          <FileViewerContent
+            key={`${fileData.id}:${fileData.contentUrl ?? "stored"}`}
+            file={fileData}
+          />
+        )}
       </div>
     </div>,
     document.body,

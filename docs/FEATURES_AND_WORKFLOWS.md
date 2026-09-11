@@ -200,14 +200,36 @@ A recursive photo and media browser aggregating all visual and audio media acros
 
 ---
 
-## 9. Batch Downloads & In-Process ZIP Archives
+## 9. Archive Lab & ZIP Workflows
+
+ZIP files expose an **Archive Lab** action in the Explorer, search results, file details, and preview toolbar. The workspace reads the ZIP directory without extracting it first and provides:
+
+- Folder-style opening directly in the regular Explorer at `/archive/:fileId/*`.
+- Read-only breadcrumb navigation through synthesized and explicit ZIP directories.
+- Normal image, media, PDF, and text previews for supported members without extraction.
+
+- A collapsible folder tree with per-entry and total expanded sizes.
+- Selection of individual files, folders, or all supported entries.
+- Direct download of an individual file from inside the ZIP.
+- Extraction into a chosen Landfill folder while preserving the archive hierarchy.
+- Collision-safe extraction roots: extracting `photos.zip` creates `photos`, then `photos (1)`, and so on when needed.
+- Visibility for encrypted or unsupported entries. They remain listed for inspection and are skipped by **Extract all**.
+
+Archive Lab currently reads ZIP files. Virtual entries remain read-only until extracted. Path traversal entries and symbolic links are rejected during archive inspection, encrypted members cannot be downloaded or extracted, and expansion limits guard against archive bombs.
+
+### Capability Workspaces
+
+File previews and Labs are registered as file capabilities rather than mounted separately by Explorer, Search, and Gallery pages. Each capability can provide MIME/extension matching, a lightweight preview, Explorer commands, custom opening behavior, and a lazy-loaded full workspace. Lab URLs use `/labs/:capability/:fileId`, so they can be bookmarked or refreshed while remaining part of the same Landfill deployment.
+
+### Creating ZIP Archives
 
 - **Single File**: Streams the raw file directly to the browser with standard `Content-Disposition` headers.
 - **Multi-Selection & Folders**:
   - Submitting multiple files or folders starts an asynchronous download job (`POST /api/downloads`).
-  - A progress modal displays the ZIP compression state.
+  - A progress notification displays the ZIP compression state.
   - Once compression completes, Landfill automatically triggers the browser file download.
   - Download links remain valid for 24 hours.
+- **Save to Landfill**: The **Create ZIP** action accepts one or more files and folders, asks for a name and destination, runs the same asynchronous compression job, and registers the completed ZIP as a new stored file.
 
 ---
 

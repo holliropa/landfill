@@ -9,6 +9,7 @@ import {
   moveStorageItems,
   permanentlyDeleteTrashItem,
   restoreTrashItem,
+  saveDownloadAsArchive,
   useInvalidateStorageQueries,
   useRenameFile,
   useRenameFolder,
@@ -51,11 +52,13 @@ export function useStorageItemActions({
 }: StorageItemActionsParams = {}) {
   const dialog = useDialog();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isCreatingArchive, setIsCreatingArchive] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
   const downloadAbortRef = useRef<AbortController | null>(null);
+  const archiveAbortRef = useRef<AbortController | null>(null);
   const moveInProgressRef = useRef(false);
   const isMountedRef = useRef(true);
   const invalidateStorageQueries = useInvalidateStorageQueries();
@@ -71,6 +74,7 @@ export function useStorageItemActions({
     return () => {
       isMountedRef.current = false;
       downloadAbortRef.current?.abort();
+      archiveAbortRef.current?.abort();
     };
   }, []);
 
@@ -343,6 +347,113 @@ export function useStorageItemActions({
     [isDownloading],
   );
 
+  const createArchiveItems = useCallback(
+    async (items: ExplorerItem[]) => {
+      if (items.length === 0 || isCreatingArchive || archiveAbortRef.current) {
+        return;
+      }
+
+      const nameResult = await dialog.prompt({
+        title: "Create ZIP archive",
+        description:
+          items.length === 1
+            ? `Create a ZIP containing "${items[0].name}".`
+            : `Create a ZIP containing ${items.length} selected items.`,
+        label: "Archive name:",
+        defaultValue: getDefaultArchiveName(items),
+        confirmLabel: "Choose destination",
+      });
+      const name = nameResult?.trim();
+      if (!name) return;
+
+      const sourceFolderIds = new Set(
+        items
+          .map((item) => item.location?.id)
+          .filter((id): id is string => id !== undefined),
+      );
+      const savedName = name.toLowerCase().endsWith(".zip")
+        ? name
+        : `${name}.zip`;
+      const destination = await dialog.selectFolder({
+        title: "Save ZIP archive",
+        description: `Choose where to save "${savedName}".`,
+        confirmLabel: "Create here",
+        initialFolderId:
+          sourceFolderIds.size === 1 ? [...sourceFolderIds][0] : "root",
+      });
+      if (!destination) return;
+
+      const abortController = new AbortController();
+      archiveAbortRef.current = abortController;
+      setIsCreatingArchive(true);
+      let loadingToastId: string | number | undefined;
+
+      try {
+        loadingToastId = toast.loading("Creating ZIP archive...");
+        const result = await createDownload(
+          items.map((item) => ({ kind: item.kind, id: item.id })),
+        );
+        const timeoutAt = Date.now() + DOWNLOAD_TIMEOUT_MS;
+
+        while (!abortController.signal.aborted) {
+          if (Date.now() >= timeoutAt) {
+            toast.error("ZIP creation timed out. Please try again.", {
+              id: loadingToastId,
+            });
+            return;
+          }
+
+          const job = await getDownloadJob(
+            result.jobId,
+            abortController.signal,
+          );
+          if (job.status === "ready") {
+            const archive = await saveDownloadAsArchive(
+              result.jobId,
+              name,
+              destination.id,
+            );
+            toast.success(`Created "${archive.name}"`, { id: loadingToastId });
+            await refreshStorageQueries(invalidateStorageQueries);
+            return;
+          }
+
+          if (job.status === "failed" || job.status === "expired") {
+            toast.error(
+              job.status === "failed"
+                ? "ZIP creation failed"
+                : "Prepared ZIP expired",
+              { id: loadingToastId },
+            );
+            return;
+          }
+
+          toast.loading(
+            `Creating ZIP archive... ${job.progress > 0 ? `${job.progress}%` : ""}`,
+            { id: loadingToastId },
+          );
+          await sleep(DOWNLOAD_POLL_INTERVAL_MS, abortController.signal);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          if (loadingToastId !== undefined) toast.dismiss(loadingToastId);
+          return;
+        }
+
+        toast.error(
+          error instanceof Error ? error.message : "ZIP creation failed",
+          { id: loadingToastId },
+        );
+      } finally {
+        if (archiveAbortRef.current === abortController) {
+          archiveAbortRef.current = null;
+        }
+        if (isMountedRef.current) setIsCreatingArchive(false);
+      }
+    },
+    [dialog, invalidateStorageQueries, isCreatingArchive],
+  );
+
   const moveItemsToFolder = useCallback(
     async (items: ExplorerItem[], destinationFolderId: string) => {
       if (items.length === 0 || moveInProgressRef.current) return;
@@ -414,6 +525,7 @@ export function useStorageItemActions({
   return useMemo(
     () => ({
       isDownloading,
+      isCreatingArchive,
       isDeleting,
       isRenaming,
       isMoving,
@@ -424,14 +536,17 @@ export function useStorageItemActions({
       restoreItems,
       permanentlyDeleteItems,
       downloadItems,
+      createArchiveItems,
       moveItems,
       moveItemsToFolder,
     }),
     [
+      createArchiveItems,
       deleteItems,
       downloadItems,
       isDeleting,
       isDownloading,
+      isCreatingArchive,
       isPermanentlyDeleting,
       isRenaming,
       isMoving,
@@ -443,6 +558,20 @@ export function useStorageItemActions({
       moveItemsToFolder,
     ],
   );
+}
+
+function getDefaultArchiveName(items: ExplorerItem[]) {
+  if (items.length !== 1) {
+    return `archive-${new Date().toISOString().slice(0, 10)}.zip`;
+  }
+
+  const item = items[0];
+  if (item.kind === "folder") return `${item.name}.zip`;
+
+  const extensionIndex = item.name.lastIndexOf(".");
+  const baseName =
+    extensionIndex > 0 ? item.name.slice(0, extensionIndex) : item.name;
+  return `${baseName}.zip`;
 }
 
 async function settleOperations(operations: Promise<unknown>[]) {

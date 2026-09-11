@@ -1,7 +1,7 @@
 import styles from "./ExplorerPage.module.css";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useFolderContent } from "@/lib/client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { FolderIcon } from "lucide-react";
 import { FileThumbnail } from "@/components/FileThumbnail";
 import { FolderNavigationBar } from "@/components/FolderNavigationBar";
@@ -12,13 +12,10 @@ export function ExplorerPage() {
   const { folderId } = useParams<{ folderId?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const [navigationRequest] = useState(
-    () =>
-      location.state as {
-        revealItemKey?: string;
-        openFileId?: string;
-      } | null,
-  );
+  const navigationRequest = location.state as {
+    revealItemKey?: string;
+    openFileId?: string;
+  } | null;
   const normalizedFolderId = folderId ?? "root";
   const {
     data: folderContent,

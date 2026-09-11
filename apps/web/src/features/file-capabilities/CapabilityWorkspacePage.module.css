@@ -1,0 +1,8 @@
+.status {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+}

@@ -34,6 +34,7 @@
 
 - **📦 In-Process Async Archives**:
   - Download single files directly, or batch-download multiple files/folders as compressed ZIP archives.
+  - Open ZIP files as read-only Explorer folders, preview supported members without extraction, or use Archive Lab to select, download, and extract contents. Selected Drive files and folders can also be compressed into a new ZIP stored in Landfill.
   - Background queue runs in-process and resumes interrupted jobs across API restarts with zero external dependencies (no Redis needed).
 
 - **🔒 Hardened Single-Owner Security**:

@@ -408,7 +408,56 @@ Executes transformations and saves the result as a new file in Landfill.
 
 ---
 
-## 6. Batch Downloads & Archive Jobs
+## 6. Archive Lab
+
+### `GET /api/archive-lab/sources/:id`
+
+Reads the central directory of a ZIP file and returns archive totals plus its entries. Each entry includes a stable numeric `index`, normalized `path`, `kind`, compressed and uncompressed sizes, modification time, and flags indicating encrypted or unsupported members.
+
+- **Success**: `200 OK`
+- **Errors**: `404` file missing, `415` unsupported archive format, `422` invalid or unsafe ZIP, `413` excessive entry count
+
+### `GET /api/archive-lab/sources/:id/entries/download?entry=:index`
+
+Streams one supported file from inside a ZIP as an attachment without extracting the archive into storage.
+
+- **Success**: `200 OK`
+- **Errors**: `404` file or entry missing, `422` encrypted, directory, or unsupported entry
+
+### `GET /api/archive-lab/sources/:id/children?path=:path`
+
+Lists the direct children of a virtual directory inside a ZIP. Missing directory records are synthesized from member paths. The response includes archive metadata and its immutable `contentRevisionId`, virtual breadcrumbs, and read-only file/folder items.
+
+- **Success**: `200 OK`
+- **Errors**: `400` invalid path, `404` file or virtual directory missing, `415` unsupported archive, `422` invalid ZIP
+
+### `GET /api/archive-lab/sources/:id/entries/:index/content?revision=:revisionId`
+
+Streams a supported archive member inline for the universal viewer. `revision` binds the request to the blob that was indexed, preventing a replaced archive from serving a different member at the same numeric index.
+
+- **Success**: `200 OK`
+- **Errors**: `404` file or entry missing, `409` archive content changed, `422` unsupported entry
+
+### `POST /api/archive-lab/extracts`
+
+Extracts all ZIP contents, or a selected set of entry indexes, into a newly created folder inside the chosen Landfill destination.
+
+```json
+{
+  "sourceFileId": "file-uuid",
+  "destinationFolderId": "root",
+  "entryIndexes": [2, 3, 7]
+}
+```
+
+`entryIndexes` is optional. Selecting a directory includes its descendants. The response identifies the new folder and reports extracted file, directory, and byte totals.
+
+- **Success**: `201 Created`
+- **Errors**: `400` invalid selection, `404` source or destination missing, `415` unsupported archive, `422` invalid/encrypted/unsafe entry
+
+---
+
+## 7. Batch Downloads & Archive Jobs
 
 ### `POST /api/downloads`
 
@@ -418,11 +467,14 @@ Creates an asynchronous zip archive job for one or multiple items/folders.
 
 ```json
 {
-  "itemIds": ["file-1-uuid", "folder-1-uuid"]
+  "items": [
+    { "kind": "file", "id": "file-1-uuid" },
+    { "kind": "folder", "id": "folder-1-uuid" }
+  ]
 }
 ```
 
-- **Response `201 Created`**:
+- **Response `202 Accepted`**:
 
 ```json
 {
@@ -450,9 +502,23 @@ Polls archive generation status.
 
 Downloads the completed zip file.
 
+### `POST /api/downloads/:id/save`
+
+Copies a completed archive job into permanent Landfill storage as a regular ZIP file. The requested name receives a `.zip` extension when it does not already have one; normal file-name collision handling applies in the destination.
+
+```json
+{
+  "name": "photo-backup.zip",
+  "folderId": "root"
+}
+```
+
+- **Success**: `201 Created` with the new file entry
+- **Errors**: `400` invalid name, `404` job or destination missing, `409` job not ready, `410` prepared archive expired
+
 ---
 
-## 7. Trash & Data Lifecycle
+## 8. Trash & Data Lifecycle
 
 ### `GET /api/trash`
 
@@ -472,7 +538,7 @@ Empties the Trash, permanently purging all deleted records and unreferenced stor
 
 ---
 
-## 8. System & Health
+## 9. System & Health
 
 ### `GET /api/health`
 

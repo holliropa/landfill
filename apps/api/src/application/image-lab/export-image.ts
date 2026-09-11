@@ -7,9 +7,10 @@ import {
   normalizeImageOutputName,
   type ImageTransformRequest,
 } from "@/domain/image-lab/image-transform";
-import { cleanupFiles } from "@/infrastructure/filesystem/cleanup-files";
-import { getFilePath } from "@/infrastructure/filesystem/get-file-path";
-import { randomUUID } from "node:crypto";
+import {
+  allocateManagedContentTarget,
+  discardManagedContent,
+} from "@/application/storage/managed-content";
 
 export async function exportImage(input: ImageTransformRequest) {
   const sourceResult = await loadImageSource(input.sourceFileId);
@@ -29,8 +30,7 @@ export async function exportImage(input: ImageTransformRequest) {
     input.options.resize,
   );
   const outputDefinition = imageOutputDefinitions[input.options.format];
-  const diskName = randomUUID();
-  const outputPath = getFilePath(diskName);
+  const { diskName, targetPath: outputPath } = allocateManagedContentTarget();
   let outputRegistered = false;
 
   try {
@@ -81,6 +81,6 @@ export async function exportImage(input: ImageTransformRequest) {
     console.error(`Could not export image ${input.sourceFileId}:`, error);
     return { success: false, code: "TRANSFORM_FAILED" } as const;
   } finally {
-    if (!outputRegistered) cleanupFiles([diskName]);
+    if (!outputRegistered) discardManagedContent([diskName]);
   }
 }

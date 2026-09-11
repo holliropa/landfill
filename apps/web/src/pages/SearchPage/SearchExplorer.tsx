@@ -11,17 +11,18 @@ import {
   StorageDetailsView,
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
-import { ImageLabWorkspace } from "@/features/image-lab";
-import { TextLabWorkspace } from "@/features/text-lab";
+import { useFileCapabilityIntegration } from "@/features/file-capabilities";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo } from "react";
 
 const toolbarCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "moveToTrash",
   "details",
 ] as const;
@@ -30,14 +31,17 @@ const contextMenuCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "details",
   "moveToTrash",
 ] as const;
 const viewerCommandIds = [
   "imageLab",
   "textLab",
+  "archiveLab",
   "download",
   "moveToTrash",
 ] as const;
@@ -46,8 +50,10 @@ const detailsCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "moveToTrash",
 ] as const;
 
@@ -62,28 +68,28 @@ export function SearchExplorer({
 }) {
   const { sortedItems, sort, changeSort } = useExplorerSorting(items);
   const controller = useExplorerController({ items: sortedItems });
-  const [imageLabFile, setImageLabFile] = useState<ExplorerItem | null>(null);
-  const [textLabFile, setTextLabFile] = useState<ExplorerItem | null>(null);
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
   const openFolder = useFolderNavigation();
+  const capabilities = useFileCapabilityIntegration();
   const commands = useMemo(
-    () =>
-      createStorageExplorerCommands({
+    () => [
+      ...createStorageExplorerCommands({
         openFolder,
-        openImageLab: setImageLabFile,
-        openTextLab: setTextLabFile,
+        openFile: capabilities.openFile,
         storage,
       }),
-    [openFolder, storage],
+      ...capabilities.commands,
+    ],
+    [capabilities.commands, capabilities.openFile, openFolder, storage],
   );
   const detailsTitleId = useId();
 
   return (
     <>
       <Explorer controller={controller} commands={commands}>
-        <Explorer.KeyboardController enabled={!imageLabFile} />
+        <Explorer.KeyboardController enabled={!capabilities.isWorkspaceOpen} />
 
         <Explorer.Shell>
           <Explorer.Toolbar>
@@ -142,40 +148,6 @@ export function SearchExplorer({
 
         <Explorer.FileViewer actionIds={viewerCommandIds} />
       </Explorer>
-
-      {imageLabFile && (
-        <ImageLabWorkspace
-          key={imageLabFile.id}
-          file={imageLabFile}
-          onClose={() => setImageLabFile(null)}
-          onShowExported={(output) => {
-            openFolder({
-              id: output.folderId ?? "root",
-              revealItemKey: `file:${output.id}`,
-            });
-          }}
-          onOpenExported={(output) => {
-            openFolder({
-              id: output.folderId ?? "root",
-              openFileId: output.id,
-            });
-          }}
-        />
-      )}
-
-      {textLabFile && (
-        <TextLabWorkspace
-          key={textLabFile.id}
-          file={textLabFile}
-          onClose={() => setTextLabFile(null)}
-          onSaved={() => {
-            openFolder({
-              id: textLabFile.location?.id ?? "root",
-              revealItemKey: `file:${textLabFile.id}`,
-            });
-          }}
-        />
-      )}
     </>
   );
 }

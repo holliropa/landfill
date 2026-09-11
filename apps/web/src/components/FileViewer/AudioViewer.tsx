@@ -1,4 +1,4 @@
-import { getFileRawUrl } from "@/lib/client";
+import { getFileContentUrl } from "@/lib/client";
 import type { FileResponse } from "@/lib/client/api";
 import {
   MusicIcon,
@@ -94,7 +94,12 @@ export function AudioViewer({ file }: { file: FileResponse }) {
 
   return (
     <div className={styles.customAudioPlayer}>
-      <audio ref={audioRef} src={getFileRawUrl(file.id)} autoPlay playsInline />
+      <audio
+        ref={audioRef}
+        src={getFileContentUrl(file)}
+        autoPlay
+        playsInline
+      />
 
       <div className={styles.audioCover}>
         <MusicIcon size={48} className={styles.audioIcon} />

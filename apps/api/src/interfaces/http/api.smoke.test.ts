@@ -4,7 +4,9 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { after, before, test } from "node:test";
+import { ZipArchive } from "archiver";
 import sharp from "sharp";
 
 const ownerPassword = "correct horse battery staple";
@@ -241,6 +243,37 @@ test("authenticated core file-management workflow works over HTTP", async () => 
     /\.zip/,
   );
   assert.ok((await archiveResponse.arrayBuffer()).byteLength > 0);
+
+  const saveArchiveResponse = await jsonRequest(
+    `${baseUrl}/api/downloads/${archiveJob.jobId}/save`,
+    {
+      method: "POST",
+      body: { name: "smoke-backup", folderId: folder.id },
+    },
+  );
+  assert.equal(saveArchiveResponse.status, 201);
+  const savedArchive = (await saveArchiveResponse.json()) as {
+    id: string;
+    name: string;
+    mimeType: string;
+  };
+  assert.equal(savedArchive.name, "smoke-backup.zip");
+  assert.equal(savedArchive.mimeType, "application/zip");
+
+  const savedArchiveSourceResponse = await authenticatedFetch(
+    `/api/archive-lab/sources/${savedArchive.id}`,
+  );
+  assert.equal(savedArchiveSourceResponse.status, 200);
+  const savedArchiveSource = (await savedArchiveSourceResponse.json()) as {
+    fileCount: number;
+    entries: { path: string }[];
+  };
+  assert.equal(savedArchiveSource.fileCount, 1);
+  assert.ok(
+    savedArchiveSource.entries.some(
+      (entry) => entry.path === "Smoke files/renamed-note.txt",
+    ),
+  );
 
   const trashResponse = await authenticatedFetch(`/api/files/${fileId}`, {
     method: "DELETE",
@@ -604,6 +637,169 @@ test("Image Lab previews and exports an ordinary sibling file", async () => {
   assert.equal(originalMetadata.height, 6);
 });
 
+test("Archive Lab lists, downloads, and selectively extracts ZIP entries", async () => {
+  const sourceFolderId = await createTestFolder("Archive Lab files");
+  const destinationFolderId = await createTestFolder("Archive extracts");
+  const zipBuffer = await createZipBuffer([
+    { name: "readme.txt", content: "Root archive file" },
+    { name: "docs/guide.md", content: "# Archive guide" },
+    { name: "docs/nested/notes.txt", content: "Nested archive notes" },
+  ]);
+  const uploadBody = new FormData();
+  uploadBody.append(
+    "files",
+    new Blob([Uint8Array.from(zipBuffer)], { type: "application/zip" }),
+    "project-bundle.zip",
+  );
+  uploadBody.append("folder", sourceFolderId);
+
+  const uploadResponse = await authenticatedFetch("/api/files", {
+    method: "POST",
+    body: uploadBody,
+  });
+  assert.equal(uploadResponse.status, 201);
+  const uploaded = (await uploadResponse.json()) as { id: string }[];
+  const sourceFileId = uploaded[0]?.id;
+  assert.ok(sourceFileId);
+
+  const sourceResponse = await authenticatedFetch(
+    `/api/archive-lab/sources/${sourceFileId}`,
+  );
+  assert.equal(sourceResponse.status, 200);
+  const source = (await sourceResponse.json()) as {
+    contentRevisionId: string;
+    name: string;
+    fileCount: number;
+    totalUncompressedSize: number;
+    entries: {
+      index: number;
+      path: string;
+      kind: "file" | "directory";
+      supported: boolean;
+    }[];
+  };
+  assert.equal(source.name, "project-bundle.zip");
+  assert.ok(source.contentRevisionId);
+  assert.equal(source.fileCount, 3);
+  assert.equal(
+    source.totalUncompressedSize,
+    Buffer.byteLength("Root archive file# Archive guideNested archive notes"),
+  );
+  assert.ok(source.entries.every((entry) => entry.supported));
+  const guideEntry = source.entries.find(
+    (entry) => entry.path === "docs/guide.md",
+  );
+  assert.ok(guideEntry);
+
+  const rootDirectoryResponse = await authenticatedFetch(
+    `/api/archive-lab/sources/${sourceFileId}/children?path=`,
+  );
+  assert.equal(rootDirectoryResponse.status, 200);
+  const rootDirectory = (await rootDirectoryResponse.json()) as {
+    archive: { contentRevisionId: string };
+    path: string;
+    breadcrumbs: { name: string; path: string }[];
+    items: {
+      name: string;
+      kind: "file" | "folder";
+      path: string;
+      entryIndex: number | null;
+    }[];
+  };
+  assert.equal(
+    rootDirectory.archive.contentRevisionId,
+    source.contentRevisionId,
+  );
+  assert.equal(rootDirectory.path, "");
+  assert.deepEqual(rootDirectory.breadcrumbs, []);
+  assert.deepEqual(
+    rootDirectory.items.map((item) => [item.kind, item.name]),
+    [
+      ["folder", "docs"],
+      ["file", "readme.txt"],
+    ],
+  );
+
+  const docsDirectoryResponse = await authenticatedFetch(
+    `/api/archive-lab/sources/${sourceFileId}/children?path=docs`,
+  );
+  assert.equal(docsDirectoryResponse.status, 200);
+  const docsDirectory = (await docsDirectoryResponse.json()) as {
+    breadcrumbs: { name: string; path: string }[];
+    items: { name: string; kind: "file" | "folder" }[];
+  };
+  assert.deepEqual(docsDirectory.breadcrumbs, [{ name: "docs", path: "docs" }]);
+  assert.deepEqual(
+    docsDirectory.items.map((item) => [item.kind, item.name]),
+    [
+      ["folder", "nested"],
+      ["file", "guide.md"],
+    ],
+  );
+
+  const inlineEntryResponse = await authenticatedFetch(
+    `/api/archive-lab/sources/${sourceFileId}/entries/${guideEntry.index}/content?revision=${source.contentRevisionId}`,
+  );
+  assert.equal(inlineEntryResponse.status, 200);
+  assert.equal(await inlineEntryResponse.text(), "# Archive guide");
+  assert.equal(
+    (
+      await authenticatedFetch(
+        `/api/archive-lab/sources/${sourceFileId}/entries/${guideEntry.index}/content?revision=stale-revision`,
+      )
+    ).status,
+    409,
+  );
+
+  const entryResponse = await authenticatedFetch(
+    `/api/archive-lab/sources/${sourceFileId}/entries/download?entry=${guideEntry.index}`,
+  );
+  assert.equal(entryResponse.status, 200);
+  assert.equal(await entryResponse.text(), "# Archive guide");
+
+  const extractResponse = await jsonRequest(
+    `${baseUrl}/api/archive-lab/extracts`,
+    {
+      method: "POST",
+      body: {
+        sourceFileId,
+        destinationFolderId,
+        entryIndexes: [guideEntry.index],
+      },
+    },
+  );
+  assert.equal(extractResponse.status, 201);
+  const extraction = (await extractResponse.json()) as {
+    folderId: string;
+    folderName: string;
+    fileCount: number;
+    directoryCount: number;
+  };
+  assert.equal(extraction.folderName, "project-bundle");
+  assert.equal(extraction.fileCount, 1);
+  assert.equal(extraction.directoryCount, 1);
+
+  const extractionRoot = await getTestFolderContent(extraction.folderId);
+  assert.deepEqual(extractionRoot.files, []);
+  assert.deepEqual(
+    extractionRoot.folders.map((folder) => folder.name),
+    ["docs"],
+  );
+  const docsFolderId = extractionRoot.folders[0]?.id;
+  assert.ok(docsFolderId);
+  const docsFolder = await getTestFolderContent(docsFolderId);
+  assert.deepEqual(
+    docsFolder.files.map((file) => file.name),
+    ["guide.md"],
+  );
+  const extractedGuideId = docsFolder.files[0]?.id;
+  assert.ok(extractedGuideId);
+  const extractedGuideResponse = await authenticatedFetch(
+    `/api/files/${extractedGuideId}/raw`,
+  );
+  assert.equal(await extractedGuideResponse.text(), "# Archive guide");
+});
+
 test("chunked upload and content update workflow works over HTTP", async () => {
   const folderId = await createTestFolder("Chunked upload folder");
 
@@ -831,4 +1027,24 @@ async function getTestFolderContent(folderId: string) {
     folders: { id: string; name: string }[];
     files: { id: string; name: string }[];
   };
+}
+
+async function createZipBuffer(
+  entries: Array<{ name: string; content: string }>,
+) {
+  return new Promise<Buffer>((resolve, reject) => {
+    const output = new PassThrough();
+    const chunks: Buffer[] = [];
+    const archive = new ZipArchive({ zlib: { level: 6 } });
+
+    output.on("data", (chunk: Buffer) => chunks.push(chunk));
+    output.on("end", () => resolve(Buffer.concat(chunks)));
+    output.on("error", reject);
+    archive.on("error", reject);
+    archive.pipe(output);
+    for (const entry of entries) {
+      archive.append(entry.content, { name: entry.name });
+    }
+    void archive.finalize();
+  });
 }

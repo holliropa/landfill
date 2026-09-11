@@ -2,6 +2,7 @@ import db from "@/infrastructure/db";
 
 type FileData = {
   id: string;
+  blobId: string;
   originalName: string;
   diskName: string;
   size: number;
@@ -34,6 +35,7 @@ export async function getFile(id: string): Promise<GetFileResult> {
       success: true,
       data: {
         id: entry.id,
+        blobId: entry.blob.id,
         originalName: entry.name,
         diskName: entry.blob.diskName,
         size: entry.blob.size,

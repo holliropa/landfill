@@ -6,6 +6,7 @@ import storageRoutes from "@/interfaces/http/search/storage.routes";
 import trashRoutes from "@/interfaces/http/trash/trash.routes";
 import authRoutes from "@/interfaces/http/auth/auth.routes";
 import imageLabRoutes from "@/interfaces/http/image-lab/image-lab.routes";
+import archiveLabRoutes from "@/interfaces/http/archive-lab/archive-lab.routes";
 import {
   requireAuthentication,
   requireSameOrigin,
@@ -33,6 +34,7 @@ export function createApp() {
   app.use(requireAuthentication);
 
   app.use("/api/files", fileRoutes);
+  app.use("/api/archive-lab", archiveLabRoutes);
   app.use("/api/image-lab", imageLabRoutes);
   app.use("/api/folders", folderRoutes);
   app.use("/api/downloads", downloadRoutes);

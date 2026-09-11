@@ -1,10 +1,8 @@
-import { getFile } from "@/application/files/get-file";
-import { isFileInActiveTree } from "@/application/storage/trash-visibility";
+import { getActiveFileContentSource } from "@/application/storage/get-active-file-content-source";
 import {
   imageOutputFormats,
   isSupportedImageInput,
 } from "@/domain/image-lab/image-transform";
-import { getFilePath } from "@/infrastructure/filesystem/get-file-path";
 import sharp from "sharp";
 
 export type ImageSourceData = {
@@ -20,7 +18,7 @@ export type ImageSourceData = {
 
 export type LoadedImageSource = {
   data: ImageSourceData;
-  diskName: string;
+  contentRevisionId: string;
   folderId: string | null;
   sourcePath: string;
 };
@@ -39,16 +37,12 @@ export type LoadImageSourceResult =
 export async function loadImageSource(
   fileId: string,
 ): Promise<LoadImageSourceResult> {
-  const fileResult = await getFile(fileId);
+  const fileResult = await getActiveFileContentSource(fileId);
   if (!fileResult.success) return fileResult;
-  if (!(await isFileInActiveTree(fileResult.data))) {
-    return { success: false, code: "FILE_NOT_FOUND" };
-  }
-
-  const sourcePath = getFilePath(fileResult.data.diskName);
+  const file = fileResult.source;
 
   try {
-    const metadata = await sharp(sourcePath).metadata();
+    const metadata = await sharp(file.sourcePath).metadata();
     if (
       !isSupportedImageInput(metadata.format) ||
       !metadata.width ||
@@ -66,14 +60,14 @@ export async function loadImageSource(
     return {
       success: true,
       source: {
-        diskName: fileResult.data.diskName,
-        folderId: fileResult.data.folderId,
-        sourcePath,
+        contentRevisionId: file.contentRevisionId,
+        folderId: file.folderId,
+        sourcePath: file.sourcePath,
         data: {
-          id: fileResult.data.id,
-          name: fileResult.data.originalName,
-          mimeType: fileResult.data.mimeType,
-          size: fileResult.data.size,
+          id: file.id,
+          name: file.name,
+          mimeType: file.mimeType,
+          size: file.size,
           width,
           height,
           hasAlpha: metadata.hasAlpha ?? false,

@@ -1,4 +1,4 @@
-import { getFileRawUrl } from "@/lib/client";
+import { getFileContentUrl } from "@/lib/client";
 import type { FileResponse } from "@/lib/client/api";
 import { IconButton } from "@/ui/IconButton";
 import {
@@ -36,7 +36,7 @@ export function ImageViewer({ file }: { file: FileResponse }) {
       <div className={styles.imageCanvas}>
         <img
           className={styles.media}
-          src={getFileRawUrl(file.id)}
+          src={getFileContentUrl(file)}
           alt={file.name}
           style={{
             transform: `scale(${zoom}) rotate(${rotation}deg)`,

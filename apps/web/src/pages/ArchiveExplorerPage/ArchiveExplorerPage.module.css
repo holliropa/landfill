@@ -1,0 +1,87 @@
+.root {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--surface);
+}
+
+.pathGroup,
+.breadcrumbs,
+.breadcrumbs li,
+.breadcrumbs button {
+  display: flex;
+  align-items: center;
+}
+
+.pathGroup {
+  min-width: 0;
+  gap: 8px;
+}
+
+.breadcrumbs {
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbs li {
+  min-width: 0;
+}
+
+.breadcrumbs button {
+  min-width: 0;
+  gap: 7px;
+  overflow: hidden;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.breadcrumbs button:not(:disabled):hover {
+  background: var(--surface-hover);
+}
+
+.breadcrumbs button:disabled {
+  color: var(--text);
+  cursor: default;
+}
+
+.breadcrumbs button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.separator {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.readOnlyNotice {
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--divider);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}

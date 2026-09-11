@@ -321,6 +321,33 @@ export async function getDownloadJob(
   return response.json();
 }
 
+export async function saveDownloadAsArchive(
+  jobId: string,
+  name: string,
+  folderId: string,
+): Promise<FileItem> {
+  const response = await apiFetch(`${config.api.url}/downloads/${jobId}/save`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name, folderId }),
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new HttpError(
+      body?.error ?? "Failed to save ZIP archive",
+      response.status,
+    );
+  }
+
+  const data = (await response.json()) as FileItemPayload;
+  return normalizeFileItem(data);
+}
+
 export async function renameFile(
   fileId: string,
   newName: string,
@@ -494,6 +521,7 @@ export type FileResponse = {
     name: string;
   };
   createdAt: Date;
+  contentUrl?: string;
 };
 
 export async function getFileById(
@@ -517,6 +545,12 @@ export async function getFileById(
 
 export function getFileRawUrl(fileId: string) {
   return `${config.api.url}/files/${fileId}/raw`;
+}
+
+export function getFileContentUrl(
+  file: Pick<FileResponse, "id" | "contentUrl">,
+) {
+  return file.contentUrl ?? getFileRawUrl(file.id);
 }
 
 export function getFileThumbnailUrl(fileId: string) {

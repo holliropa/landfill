@@ -23,7 +23,7 @@ export type {
   ExplorerRuntime,
   ExplorerSurface,
 } from "./components";
-export type { ExplorerItem } from "./types";
+export { isDriveExplorerItem, type ExplorerItem } from "./types";
 export { searchExplorerListColumns } from "./components/ExplorerList";
 export {
   useExplorerSorting,

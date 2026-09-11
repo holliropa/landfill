@@ -12,17 +12,18 @@ import {
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
 import { useFolderNavigation } from "@/hooks/useFolderNavigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { ImageLabWorkspace } from "@/features/image-lab";
-import { TextLabWorkspace } from "@/features/text-lab";
+import { useEffect, useId, useMemo, useRef } from "react";
+import { useFileCapabilityIntegration } from "@/features/file-capabilities";
 import styles from "./FolderExplorer.module.css";
 
 const toolbarCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "moveToTrash",
   "details",
 ] as const;
@@ -31,14 +32,17 @@ const contextMenuCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "details",
   "moveToTrash",
 ] as const;
 const viewerCommandIds = [
   "imageLab",
   "textLab",
+  "archiveLab",
   "download",
   "moveToTrash",
 ] as const;
@@ -47,8 +51,10 @@ const detailsCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "moveToTrash",
 ] as const;
 
@@ -69,39 +75,24 @@ export function FolderExplorer({
 }) {
   const { sortedItems, sort, changeSort } = useExplorerSorting(items);
   const controller = useExplorerController({ items: sortedItems });
-  const [imageLabFile, setImageLabFile] = useState<ExplorerItem | null>(null);
-  const [textLabFile, setTextLabFile] = useState<ExplorerItem | null>(null);
-  const [pendingSelectionKey, setPendingSelectionKey] = useState<string | null>(
-    null,
-  );
   const handledRequestRef = useRef<string | null>(null);
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
   const openFolder = useFolderNavigation();
+  const capabilities = useFileCapabilityIntegration();
   const commands = useMemo(
-    () =>
-      createStorageExplorerCommands({
+    () => [
+      ...createStorageExplorerCommands({
         openFolder,
-        openImageLab: setImageLabFile,
-        openTextLab: setTextLabFile,
+        openFile: capabilities.openFile,
         storage,
       }),
-    [openFolder, storage],
+      ...capabilities.commands,
+    ],
+    [capabilities.commands, capabilities.openFile, openFolder, storage],
   );
   const detailsTitleId = useId();
-
-  useEffect(() => {
-    if (!pendingSelectionKey) return;
-    const outputIndex = sortedItems.findIndex(
-      (item) => item.key === pendingSelectionKey,
-    );
-    if (outputIndex < 0) return;
-
-    controller.dispatch({ type: "select-one", index: outputIndex });
-    const timeoutId = window.setTimeout(() => setPendingSelectionKey(null), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [controller, pendingSelectionKey, sortedItems]);
 
   useEffect(() => {
     const requestedKey =
@@ -125,7 +116,9 @@ export function FolderExplorer({
     <div className={styles.root}>
       <div className={styles.explorer}>
         <Explorer controller={controller} commands={commands}>
-          <Explorer.KeyboardController enabled={!imageLabFile} />
+          <Explorer.KeyboardController
+            enabled={!capabilities.isWorkspaceOpen}
+          />
 
           <Explorer.Shell>
             <Explorer.Toolbar>
@@ -192,34 +185,6 @@ export function FolderExplorer({
           <Explorer.FileViewer actionIds={viewerCommandIds} />
         </Explorer>
       </div>
-
-      {imageLabFile && (
-        <ImageLabWorkspace
-          key={imageLabFile.id}
-          file={imageLabFile}
-          onClose={() => setImageLabFile(null)}
-          onExported={(output) => {
-            setPendingSelectionKey(`file:${output.id}`);
-          }}
-          onShowExported={(output) => {
-            setPendingSelectionKey(`file:${output.id}`);
-          }}
-          onOpenExported={(output) => {
-            controller.fileViewer.openFile(output.id);
-          }}
-        />
-      )}
-
-      {textLabFile && (
-        <TextLabWorkspace
-          key={textLabFile.id}
-          file={textLabFile}
-          onClose={() => setTextLabFile(null)}
-          onSaved={() => {
-            setPendingSelectionKey(`file:${textLabFile.id}`);
-          }}
-        />
-      )}
     </div>
   );
 }

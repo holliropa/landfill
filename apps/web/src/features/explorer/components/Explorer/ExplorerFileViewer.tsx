@@ -23,6 +23,7 @@ export function ExplorerFileViewer({
   return (
     <FileViewer
       fileId={fileViewer.openedId}
+      file={fileViewer.openedFile}
       name={fileViewer.openedFile?.name}
       onClose={fileViewer.closeFile}
       navigation={{

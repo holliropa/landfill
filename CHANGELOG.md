@@ -2,6 +2,13 @@
 
 All notable changes to Landfill will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- Added Archive Lab for browsing ZIP directory trees, downloading individual members, extracting selected or complete contents, and creating ZIP files from selected Landfill items.
+- Added ZIP extraction safeguards for traversal paths, symbolic links, encrypted entries, and unsupported compression methods.
+
 ## v0.2.0 - 2026-08-29
 
 ### Added

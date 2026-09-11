@@ -7,6 +7,7 @@ import {
 } from "@/application/downloads/create-download-job";
 import { getDownloadJob } from "@/application/downloads/get-download-job";
 import { getJobFilePath } from "@/application/downloads/get-job-file-path";
+import { saveDownloadJob } from "@/application/downloads/save-download-job";
 
 export async function createDownloadJobHandler(req: Request, res: Response) {
   const { items } = req.body as { items?: DownloadJobItem[] };
@@ -111,4 +112,44 @@ export async function downloadArchiveFileHandler(req: Request, res: Response) {
       }
     },
   );
+}
+
+export async function saveArchiveFileHandler(req: Request, res: Response) {
+  const { id } = req.params as { id?: string };
+  const body = (req.body ?? {}) as { name?: unknown; folderId?: unknown };
+  if (
+    !id ||
+    typeof body.name !== "string" ||
+    typeof body.folderId !== "string"
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Archive name and folder are required" });
+  }
+
+  const result = await saveDownloadJob({
+    jobId: id,
+    name: body.name,
+    folderId: body.folderId,
+  });
+  if (!result.success) {
+    switch (result.code) {
+      case "INVALID_NAME":
+        return res.status(400).json({ error: "Invalid archive name" });
+      case "JOB_NOT_FOUND":
+      case "FOLDER_NOT_FOUND":
+        return res
+          .status(404)
+          .json({ error: "Archive job or folder not found" });
+      case "JOB_NOT_READY":
+        return res.status(409).json({ error: "Archive is not ready" });
+      case "ARCHIVE_MISSING":
+        return res.status(410).json({ error: "Prepared archive has expired" });
+      case "DATABASE_ERROR":
+      default:
+        return res.status(500).json({ error: "Could not save archive" });
+    }
+  }
+
+  return res.status(201).json(result.data);
 }

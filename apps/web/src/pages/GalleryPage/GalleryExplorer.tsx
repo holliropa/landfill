@@ -15,8 +15,7 @@ import {
   StorageDetailsView,
   useStorageItemActions,
 } from "@/features/explorer/integrations/storage";
-import { ImageLabWorkspace } from "@/features/image-lab";
-import { TextLabWorkspace } from "@/features/text-lab";
+import { useFileCapabilityIntegration } from "@/features/file-capabilities";
 import {
   type FolderNavigationTarget,
   useFolderNavigation,
@@ -49,8 +48,10 @@ const toolbarCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "moveToTrash",
   "details",
 ] as const;
@@ -59,14 +60,17 @@ const contextMenuCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "details",
   "moveToTrash",
 ] as const;
 const viewerCommandIds = [
   "imageLab",
   "textLab",
+  "archiveLab",
   "download",
   "moveToTrash",
 ] as const;
@@ -75,8 +79,10 @@ const detailsCommandIds = [
   "rename",
   "download",
   "move",
+  "createArchive",
   "imageLab",
   "textLab",
+  "archiveLab",
   "moveToTrash",
 ] as const;
 const galleryPageSize = 60;
@@ -99,25 +105,22 @@ export function GalleryExplorer({
     "landfill:gallery-sort",
   );
   const controller = useExplorerController({ items: sortedItems });
-  const [imageLabFile, setImageLabFile] = useState<ExplorerItem | null>(null);
-  const [textLabFile, setTextLabFile] = useState<ExplorerItem | null>(null);
   const [isSlideshowRunning, setIsSlideshowRunning] = useState(false);
-  const [pendingOpenFileId, setPendingOpenFileId] = useState<string | null>(
-    null,
-  );
   const openFolder = useFolderNavigation();
+  const capabilities = useFileCapabilityIntegration();
   const storage = useStorageItemActions({
     onAfterItemsChanged: controller.clearSelection,
   });
   const commands = useMemo(
-    () =>
-      createStorageExplorerCommands({
+    () => [
+      ...createStorageExplorerCommands({
         openFolder,
-        openImageLab: setImageLabFile,
-        openTextLab: setTextLabFile,
+        openFile: capabilities.openFile,
         storage,
       }),
-    [openFolder, storage],
+      ...capabilities.commands,
+    ],
+    [capabilities.commands, capabilities.openFile, openFolder, storage],
   );
   const detailsTitleId = useId();
 
@@ -152,20 +155,9 @@ export function GalleryExplorer({
     }
   };
 
-  useEffect(() => {
-    if (!pendingOpenFileId) return;
-    if (!sortedItems.some((item) => item.id === pendingOpenFileId)) return;
-
-    const timeoutId = window.setTimeout(() => {
-      controller.fileViewer.openFile(pendingOpenFileId);
-      setPendingOpenFileId(null);
-    }, 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [controller.fileViewer, pendingOpenFileId, sortedItems]);
-
   return (
     <Explorer controller={controller} commands={commands}>
-      <Explorer.KeyboardController enabled={!imageLabFile} />
+      <Explorer.KeyboardController enabled={!capabilities.isWorkspaceOpen} />
 
       <Explorer.Shell>
         <GalleryHeader
@@ -219,37 +211,6 @@ export function GalleryExplorer({
       </Explorer.Shell>
 
       <Explorer.FileViewer actionIds={viewerCommandIds} />
-
-      {imageLabFile && (
-        <ImageLabWorkspace
-          key={imageLabFile.id}
-          file={imageLabFile}
-          onClose={() => setImageLabFile(null)}
-          onShowExported={(output) => {
-            openFolder({
-              id: output.folderId ?? "root",
-              revealItemKey: `file:${output.id}`,
-            });
-          }}
-          onOpenExported={(output) => {
-            setPendingOpenFileId(output.id);
-          }}
-        />
-      )}
-
-      {textLabFile && (
-        <TextLabWorkspace
-          key={textLabFile.id}
-          file={textLabFile}
-          onClose={() => setTextLabFile(null)}
-          onSaved={() => {
-            openFolder({
-              id: textLabFile.location?.id ?? "root",
-              revealItemKey: `file:${textLabFile.id}`,
-            });
-          }}
-        />
-      )}
     </Explorer>
   );
 }

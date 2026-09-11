@@ -7,3 +7,4 @@ export * from "./storage";
 export * from "./trash";
 export * from "./invalidation";
 export * from "./image-lab";
+export * from "./archive-lab";
